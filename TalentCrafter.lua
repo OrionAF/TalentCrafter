@@ -47,6 +47,7 @@ local ARROW_W, ARROW_H = 32, 32
 -- Colors
 local COLOR_ENABLED = {1.00, 0.90, 0.20, 1.0} -- warm gold
 local COLOR_DISABLED = {0.70, 0.72, 0.78, 1.0} -- cool opaque gray
+local COLOR_WHITE = {1.0, 1.0, 1.0, 1.0}
 
 -- Draw policy: draw unmet (gray) first, then met (gold) on top.
 local GOLD_WINS = true
@@ -131,26 +132,38 @@ end
 
 -- Stitch 4 tiles to fill exactly the 'frame' rect
 local function BuildTalentBackground(frame, basename)
-    local function quad(suffix, vAnchor1, vAnchor2)
-        local tex = frame:CreateTexture(nil, "BACKGROUND")
-        tex:SetTexture("Interface\\TalentFrame\\" .. basename .. suffix)
-        tex:SetPoint(vAnchor1, frame, vAnchor1, 0, 0)
-        tex:SetPoint(vAnchor2, frame, vAnchor2, 0, 0)
-        if string.find(suffix, "Top") then
-            tex:SetPoint("BOTTOM", frame, "CENTER", 0, 0)
-        else
-            tex:SetPoint("TOP", frame, "CENTER", 0, 0)
-        end
-        if string.find(suffix, "Left") then
-            tex:SetPoint("RIGHT", frame, "CENTER", 0, 0)
-        else
-            tex:SetPoint("LEFT", frame, "CENTER", 0, 0)
-        end
-    end
-    quad("-TopLeft", "TOPLEFT", "TOPLEFT")
-    quad("-TopRight", "TOPRIGHT", "TOPRIGHT")
-    quad("-BottomLeft", "BOTTOMLEFT", "BOTTOMLEFT")
-    quad("-BottomRight", "BOTTOMRIGHT", "BOTTOMRIGHT")
+    -- Fill the frame with the four Blizzard tiles using original ratios
+    -- Original atlas: width = 256 + 64, height = 256 + 128
+    local W = frame:GetWidth() or 320
+    local H = frame:GetHeight() or 384
+    local wTL = W * (256 / 320)
+    local wTR = W - wTL
+    local hTL = H * (256 / 384)
+    local hBL = H - hTL
+
+    local tl = frame:CreateTexture(nil, "BACKGROUND")
+    tl:SetTexture("Interface\\TalentFrame\\" .. basename .. "-TopLeft")
+    tl:SetWidth(wTL)
+    tl:SetHeight(hTL)
+    tl:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+
+    local tr = frame:CreateTexture(nil, "BACKGROUND")
+    tr:SetTexture("Interface\\TalentFrame\\" .. basename .. "-TopRight")
+    tr:SetWidth(wTR)
+    tr:SetHeight(hTL)
+    tr:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
+
+    local bl = frame:CreateTexture(nil, "BACKGROUND")
+    bl:SetTexture("Interface\\TalentFrame\\" .. basename .. "-BottomLeft")
+    bl:SetWidth(wTL)
+    bl:SetHeight(hBL)
+    bl:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+
+    local br = frame:CreateTexture(nil, "BACKGROUND")
+    br:SetTexture("Interface\\TalentFrame\\" .. basename .. "-BottomRight")
+    br:SetWidth(wTR)
+    br:SetHeight(hBL)
+    br:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
 end
 
 function addon:RefreshTalentIcons()
@@ -214,7 +227,12 @@ function addon:Show()
     mainFrame:Show()
     local off = max(0, (UnitLevel("player") - 10) * 30)
     if scrollFrame and scrollFrame:IsShown() then
-        scrollFrame:SetVerticalScroll(off)
+        local child = scrollFrame:GetScrollChild()
+        local maxOff = 0
+        if child and scrollFrame:GetHeight() and child:GetHeight() then
+            maxOff = max(0, (child:GetHeight() - scrollFrame:GetHeight()))
+        end
+        scrollFrame:SetVerticalScroll(min(off, maxOff))
     end
 end
 function addon:Hide()
@@ -233,6 +251,54 @@ local function currentRankCounts()
     return counts
 end
 
+-- Rebuild pickOrder by applying each pick in sequence and dropping any that
+-- no longer meet tree points or prerequisite max-rank requirements.
+function addon:RevalidatePickOrder()
+    local newOrder = {}
+    local counts = {}
+    local tabSpent = { [1]=0, [2]=0, [3]=0 }
+    local function addCount(id)
+        counts[id] = (counts[id] or 0) + 1
+        local dash = string.find(id, "-")
+        if dash then
+            local t = tonumber(string.sub(id, 1, dash - 1))
+            if t then tabSpent[t] = (tabSpent[t] or 0) + 1 end
+        end
+    end
+    for _, id in ipairs(self.pickOrder) do
+        local dash = string.find(id, "-")
+        if dash then
+            local tab = tonumber(string.sub(id, 1, dash - 1))
+            local idx = tonumber(string.sub(id, dash + 1))
+            if tab and idx then
+                local _, _, tier = GetTalentInfo(tab, idx)
+                local requiredPoints = ((tier or 1) - 1) * 5
+                local okTier = (tabSpent[tab] or 0) >= requiredPoints
+
+                local pTier, pCol = GetTalentPrereqs(tab, idx)
+                local okPrereq = true
+                if pTier and pCol then
+                    local preIndex = FindTalentByPosition(tab, pTier, pCol)
+                    local _, _, _, _, _, preMaxRank = GetTalentInfo(tab, preIndex)
+                    local have = counts[tab .. "-" .. preIndex] or 0
+                    okPrereq = preMaxRank and have >= preMaxRank
+                end
+
+                -- also respect per-talent max rank
+                local _, _, _, _, _, maxRank = GetTalentInfo(tab, idx)
+                local haveSelf = counts[id] or 0
+                local okSelf = not maxRank or haveSelf < maxRank
+
+                if okTier and okPrereq and okSelf then
+                    tinsert(newOrder, id)
+                    addCount(id)
+                end
+            end
+        end
+    end
+    self.pickOrder = newOrder
+end
+
 function addon:UpdateCalculatorOverlays()
     local counts = currentRankCounts()
     for tab, t in pairs(addon.calcTalents) do
@@ -240,8 +306,15 @@ function addon:UpdateCalculatorOverlays()
             local id = tab .. "-" .. idx
             local _, _, _, _, _, maxRank = GetTalentInfo(tab, idx)
             local r = counts[id] or 0
+            if btn.rankText then
+                btn.rankText:SetText((r or 0) .. "/" .. (maxRank or 0))
+                if r > 0 then
+                    btn.rankText:SetTextColor(1.0, 0.82, 0.0)
+                else
+                    btn.rankText:SetTextColor(0.7, 0.72, 0.78)
+                end
+            end
             if r > 0 then
-                btn.orderText:SetText(r)
                 SetTexDesaturated(btn.icon, false)
                 if r == maxRank then
                     btn.border:Show()
@@ -249,7 +322,6 @@ function addon:UpdateCalculatorOverlays()
                     btn.border:Hide()
                 end
             else
-                btn.orderText:SetText("")
                 SetTexDesaturated(btn.icon, true)
                 btn.border:Hide()
             end
@@ -278,6 +350,26 @@ function addon:OnTalentClick(tabIndex, talentIndex)
         end
     end
 
+    -- tree points gate: require enough points in the tree to open this tier
+    local _, _, tier = GetTalentInfo(tabIndex, talentIndex)
+    local requiredPoints = ((tier or 1) - 1) * 5
+    if requiredPoints > 0 then
+        local spent = 0
+        for _, id in ipairs(self.pickOrder) do
+            local dash = string.find(id, "-")
+            if dash then
+                local t = tonumber(string.sub(id, 1, dash - 1))
+                if t == tabIndex then
+                    spent = spent + 1
+                end
+            end
+        end
+        if spent < requiredPoints then
+            self:Print("|cFFFF0000Requires " .. requiredPoints .. " points in this tree.|r")
+            return
+        end
+    end
+
     local id = tabIndex .. "-" .. talentIndex
     local _, _, _, _, _, maxRank = GetTalentInfo(tabIndex, talentIndex)
     local have = 0
@@ -300,6 +392,8 @@ function addon:OnTalentRightClick(tabIndex, talentIndex)
     for i = table.getn(self.pickOrder), 1, -1 do
         if self.pickOrder[i] == id then
             table.remove(self.pickOrder, i)
+            -- Revalidate the remaining picks after removal
+            if self.RevalidatePickOrder then self:RevalidatePickOrder() end
             self:UpdateCalculatorOverlays()
             for t = 1, 3 do
                 self:DrawPrereqGraph(getglobal("TC_CalcTree" .. t))
@@ -339,6 +433,7 @@ function addon:ImportFromString(s)
             end
         end
     end
+    if self.RevalidatePickOrder then self:RevalidatePickOrder() end
     addon:UpdateCalculatorOverlays()
     addon:Print("Build imported successfully.")
     for t = 1, 3 do
@@ -370,56 +465,52 @@ end
 
 -- ===== Branch system (Blizzard atlas) ======================================
 
-local MAX_BRANCH_TEXTURES, MAX_ARROW_TEXTURES = 128, 96
+local MAX_BRANCH_TEXTURES, MAX_ARROW_TEXTURES = 128, 96 -- soft caps (lazy grow)
 
 local function EnsurePools(tree)
     if tree._branches then
         return
     end
     tree._branches, tree._arrows = {}, {}
-    local parent = tree.branchLayer
-    for i = 1, MAX_BRANCH_TEXTURES do
-        local t = parent:CreateTexture(nil, "BORDER")
-        t:SetTexture("Interface\\TalentFrame\\UI-TalentBranches")
-        t:Hide()
-        tree._branches[i] = t
-    end
-    parent = tree.arrowLayer
-    for i = 1, MAX_ARROW_TEXTURES do
-        local t = parent:CreateTexture(nil, "OVERLAY")
-        t:SetTexture("Interface\\TalentFrame\\UI-TalentArrows")
-        t:Hide()
-        tree._arrows[i] = t
-    end
 end
 local function GetBranchTex(tree)
     local i = tree._branchTexIndex
     local t = tree._branches[i]
-    tree._branchTexIndex = i + 1
-    if t then
-        t:Show()
-        return t
+    if not t then
+        if i <= MAX_BRANCH_TEXTURES then
+            t = tree.branchLayer:CreateTexture(nil, "BORDER")
+            t:SetTexture("Interface\\TalentFrame\\UI-TalentBranches")
+            tree._branches[i] = t
+        else
+            return nil
+        end
     end
+    tree._branchTexIndex = i + 1
+    t:Show()
+    return t
 end
 local function GetArrowTex(tree)
     local i = tree._arrowTexIndex
     local t = tree._arrows[i]
-    tree._arrowTexIndex = i + 1
-    if t then
-        t:Show()
-        return t
+    if not t then
+        if i <= MAX_ARROW_TEXTURES then
+            t = tree.arrowLayer:CreateTexture(nil, "OVERLAY")
+            t:SetTexture("Interface\\TalentFrame\\UI-TalentArrows")
+            tree._arrows[i] = t
+        else
+            return nil
+        end
     end
+    tree._arrowTexIndex = i + 1
+    t:Show()
+    return t
 end
 local function HideUnused(tree)
-    for i = tree._branchTexIndex, MAX_BRANCH_TEXTURES do
-        if tree._branches[i] then
-            tree._branches[i]:Hide()
-        end
+    for i = tree._branchTexIndex, table.getn(tree._branches) do
+        if tree._branches[i] then tree._branches[i]:Hide() end
     end
-    for i = tree._arrowTexIndex, MAX_ARROW_TEXTURES do
-        if tree._arrows[i] then
-            tree._arrows[i]:Hide()
-        end
+    for i = tree._arrowTexIndex, table.getn(tree._arrows) do
+        if tree._arrows[i] then tree._arrows[i]:Hide() end
     end
 end
 
@@ -510,41 +601,53 @@ local function BuildGraphs(tree, counts)
             -- GOLD only when you have the prerequisite fully ranked
             local have = counts[tree._tab .. "-" .. preIndex] or 0
             local _, _, _, _, _, preMaxRank = GetTalentInfo(tree._tab, preIndex)
-            local target = (preMaxRank and have >= preMaxRank) and met or unmet
+            -- Tree points gate for tier unlock
+            local spent = 0
+            for k, v in pairs(counts) do
+                local dash = string.find(k, "-")
+                if dash and tonumber(string.sub(k, 1, dash - 1)) == tree._tab then
+                    spent = spent + (v or 0)
+                end
+            end
+            local requiredPoints = ((bTier or 1) - 1) * 5
+            local tierUnlocked = (spent >= requiredPoints)
+            local ok = (preMaxRank and have >= preMaxRank) and tierUnlocked
+            local target = ok and met or unmet
+            local flag = (target == met) and 1 or -1
 
             if bCol == pCol then
                 -- vertical
                 for t = pTier, bTier - 1 do
-                    target[t][bCol].down = 1
+                    target[t][bCol].down = flag
                     if (t + 1) < bTier then
-                        target[t + 1][bCol].up = 1
+                        target[t + 1][bCol].up = flag
                     end
                 end
-                target[bTier][bCol].topArrow = 1
+                target[bTier][bCol].topArrow = flag
             elseif bTier == pTier then
                 -- horizontal
                 local left, right = min(bCol, pCol), max(bCol, pCol)
                 for c = left, right - 1 do
-                    target[bTier][c].right = 1
-                    target[bTier][c + 1].left = 1
+                    target[bTier][c].right = flag
+                    target[bTier][c + 1].left = flag
                 end
                 if bCol < pCol then
-                    target[bTier][bCol].rightArrow = 1
+                    target[bTier][bCol].rightArrow = flag
                 else
-                    target[bTier][bCol].leftArrow = 1
+                    target[bTier][bCol].leftArrow = flag
                 end
             else
                 -- L-shape: down on child col, then across on child's row
                 for t = pTier, bTier - 1 do
-                    target[t][bCol].down = 1
-                    target[t + 1][bCol].up = 1
+                    target[t][bCol].down = flag
+                    target[t + 1][bCol].up = flag
                 end
                 local left, right = min(bCol, pCol), max(bCol, pCol)
                 for c = left, right - 1 do
-                    target[bTier][c].right = 1
-                    target[bTier][c + 1].left = 1
+                    target[bTier][c].right = flag
+                    target[bTier][c + 1].left = flag
                 end
-                target[bTier][bCol].topArrow = 1
+                target[bTier][bCol].topArrow = flag
             end
         end
     end
@@ -647,8 +750,9 @@ function addon:DrawPrereqGraph(tree)
         PruneUnmetWhereMet(unmet, met)
     end
     tree._branchTexIndex, tree._arrowTexIndex = 1, 1
-    DrawFromNodes(tree, unmet, COLOR_DISABLED)
-    DrawFromNodes(tree, met, COLOR_ENABLED)
+    -- Use atlas variants (-1 gray, 1 gold) instead of tinting
+    DrawFromNodes(tree, unmet, COLOR_WHITE)
+    DrawFromNodes(tree, met, COLOR_WHITE)
     HideUnused(tree)
 end
 
@@ -675,27 +779,19 @@ function addon:CreateFrames()
         end
     end
 
-    -- main (guide)
-    mainFrame = CreateFrame("Frame", "TalentCrafterFrame", UIParent)
+    -- main (guide) anchored to Blizzard TalentFrame
+    local TF = getglobal("TalentFrame")
+    mainFrame = CreateFrame("Frame", "TalentCrafterFrame", TF or UIParent)
     mainFrame:SetWidth(280)
     mainFrame:SetHeight(300)
-    mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    if TF then
+        mainFrame:ClearAllPoints()
+        mainFrame:SetPoint("TOPLEFT", TF, "TOPRIGHT", 16, -16)
+    else
+        mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    end
     ApplyDialogBackdrop(mainFrame)
-    mainFrame:SetMovable(true)
-    mainFrame:EnableMouse(true)
-    mainFrame:RegisterForDrag("LeftButton")
-    mainFrame:SetScript(
-        "OnDragStart",
-        function()
-            this:StartMoving()
-        end
-    )
-    mainFrame:SetScript(
-        "OnDragStop",
-        function()
-            this:StopMovingOrSizing()
-        end
-    )
+    mainFrame:SetMovable(false)
     mainFrame:SetScript(
         "OnUpdate",
         function()
@@ -852,24 +948,7 @@ function addon:CreateFrames()
     iText:SetPoint("RIGHT", infoButton, "LEFT", -5, 0)
     iText:SetText("Info")
 
-    local tie = CreateFrame("CheckButton", "TC_TieToTalentCheckbox", settingsPanel, "UICheckButtonTemplate")
-    tie:SetPoint("TOPLEFT", settingsPanel, "TOPLEFT", 20, -40)
-    getglobal(tie:GetName() .. "Text"):SetText("Only show with Talent panel")
-    tie:SetScript(
-        "OnClick",
-        function()
-            TC_SavedSettings.tieToTalent = this:GetChecked()
-            local TF = getglobal("TalentFrame")
-            if this:GetChecked() then
-                if not TF or not TF:IsShown() then
-                    addon:Hide()
-                end
-            else
-                addon:Show()
-            end
-        end
-    )
-    tie:SetChecked(TC_SavedSettings.tieToTalent or false)
+    -- Removed: tie-to-talent toggle. Viewer always anchors to TalentFrame now.
 
     -- Robust tier detection: fallback to 11 tiers if early snapshot is low.
     local function DetectMaxTier()
@@ -995,8 +1074,8 @@ function addon:CreateFrames()
             btn.border:SetAllPoints(true)
             btn.border:SetTexture("Interface\\Buttons\\UI-Quickslot-Depress")
             btn.border:Hide()
-            btn.orderText = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-            btn.orderText:SetPoint("CENTER", btn, "CENTER", 0, 0)
+            btn.rankText = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            btn.rankText:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -2, 2)
             btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
             local T, I = tab, idx
             btn:SetScript(
@@ -1162,36 +1241,46 @@ eventFrame:SetScript(
             -- do NOT create frames here; wait until PLAYER_LOGIN when all core data is ready
             this:UnregisterEvent("ADDON_LOADED")
         elseif event == "PLAYER_LOGIN" then
-            addon:CreateFrames()
+            -- Defer frame creation until talent data is ready (some cores are late)
+            local function TalentDataReady()
+                local tabs = GetNumTalentTabs() or 0
+                if tabs < 1 then return false end
+                for t = 1, tabs do
+                    local n = GetNumTalents(t)
+                    if not n or n == 0 then
+                        return false
+                    end
+                end
+                return true
+            end
 
-            -- Safely hook ToggleTalentFrame after Blizzard_TalentUI is loaded
-            if ToggleTalentFrame then
-                local origToggle = ToggleTalentFrame
-                ToggleTalentFrame = function()
-                    origToggle()
-                    if TC_SavedSettings.tieToTalent then
-                        local TF = getglobal("TalentFrame")
-                        if TF and TF:IsShown() then
-                            addon:Show()
-                        else
-                            addon:Hide()
+            if TalentDataReady() then
+                addon:CreateFrames()
+            else
+                -- Try again when spells/talent data loads
+                eventFrame:RegisterEvent("SPELLS_CHANGED")
+            end
+        elseif event == "SPELLS_CHANGED" then
+            if not addon.isInitialized then
+                local tabs = GetNumTalentTabs() or 0
+                if tabs > 0 then
+                    local ready = true
+                    for t = 1, tabs do
+                        if (GetNumTalents(t) or 0) == 0 then
+                            ready = false
+                            break
                         end
+                    end
+                    if ready then
+                        addon:CreateFrames()
+                        this:UnregisterEvent("SPELLS_CHANGED")
                     end
                 end
             end
 
-            if not TC_SavedSettings.tieToTalent then
-                addon:Show()
-            else
-                addon:Hide()
-            end
+            -- Viewer now anchors to TalentFrame and inherits its visibility.
         elseif event == "PLAYER_ENTERING_WORLD" then
             if addon.isInitialized then
-                if not TC_SavedSettings.tieToTalent then
-                    addon:Show()
-                else
-                    addon:Hide()
-                end
                 addon:UpdateGlow()
             end
         elseif event == "PLAYER_LEVEL_UP" then
@@ -1208,9 +1297,33 @@ eventFrame:RegisterEvent("PLAYER_LEVEL_UP")
 
 -- ===== Slash ================================================================
 SLASH_TC1, SLASH_TC2 = "/tc", "/TC"
+
+local function TryInitializeNow()
+    if addon.isInitialized then return true end
+    -- Try to load Blizzard Talent UI and create frames if data is ready
+    if not IsAddOnLoaded("Blizzard_TalentUI") then
+        if TalentFrame_LoadUI then TalentFrame_LoadUI() else LoadAddOn("Blizzard_TalentUI") end
+    end
+    -- Readiness: at least one tab and talents populated
+    local tabs = GetNumTalentTabs() or 0
+    if tabs > 0 then
+        local ok = true
+        for t = 1, tabs do
+            if (GetNumTalents(t) or 0) == 0 then ok = false break end
+        end
+        if ok and not addon.isInitialized then
+            addon:CreateFrames()
+        end
+    end
+    return addon.isInitialized
+end
+
 function SlashCmdList.TC(msg)
     if not addon.isInitialized then
-        return
+        if not TryInitializeNow() then
+            addon:Print("Talent data not ready yet; try again in a moment.")
+            return
+        end
     end
     local cmd = string.lower(msg or "")
     if cmd == "settings" then
@@ -1241,13 +1354,23 @@ function SlashCmdList.TC(msg)
     elseif cmd == "unlock" then
         mainFrame:SetMovable(true)
         addon:Print("Addon Frame |cFF00FF00Unlocked|r.")
-    elseif talentGuides[string.upper(cmd)] then
+    elseif talentGuides[string.upper(cmd)] ~= nil then
         manualOverride = true
         local sel = string.upper(cmd)
-        talentOrder = talentGuides[sel]
-        addon:UpdateTalentDisplay()
-        addon:UpdateGlow()
-        addon:Print("Now showing " .. sel)
+        if talentGuides[sel] then
+            talentOrder = talentGuides[sel]
+            addon:UpdateTalentDisplay()
+            addon:UpdateGlow()
+            addon:Print("Now showing " .. sel)
+        else
+            addon:Print("No guide configured for " .. sel .. ". Opening calculator.")
+            addon:RefreshTalentIcons()
+            calculatorFrame:Show()
+            addon:UpdateCalculatorOverlays()
+            for tab = 1, 3 do
+                addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
+            end
+        end
     else
         addon:Print("Usage: /tc [calc | settings | reset | lock | unlock]")
     end
