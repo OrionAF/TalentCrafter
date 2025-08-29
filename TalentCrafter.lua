@@ -598,7 +598,8 @@ function addon:CreateFrames()
     calculatorFrame:SetScript("OnDragStop",  function() this:StopMovingOrSizing() end)
     local calcTitle = calculatorFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     calcTitle:SetPoint("TOP", calculatorFrame, "TOP", 0, -10)
-    local className = (select(2, UnitClass("player"))) or "UNKNOWN"
+    local _, classToken = UnitClass("player")
+    local className = classToken or "UNKNOWN"
     calcTitle:SetText(className .. " Talent Calculator")
     local calcClose = CreateFrame("Button", nil, calculatorFrame)
     calcClose:SetWidth(16); calcClose:SetHeight(16)
