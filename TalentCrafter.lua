@@ -2,8 +2,8 @@
 -- TalentCrafter (Vanilla 1.12.1 / Turtle WoW)
 -- ============================================================================
 local ADDON_NAME = "TalentCrafter"
-local addon = {isInitialized = false, talentLines = {}, calcTalents = {}, pickOrder = {}}
-local mainFrame, settingsPanel, infoPanel, calculatorFrame, exportFrame, importFrame, scrollFrame
+local addon = {isInitialized = false, talentLines = {}, calcTalents = {}, pickOrder = {}, viewerCollapsed = false}
+local mainFrame, calculatorFrame, exportFrame, importFrame, scrollFrame
 
 -- No default guides — keep these nil.
 local druidTalentOrder,
@@ -33,9 +33,10 @@ local talentOrder = nil
 local manualOverride = false
 
 -- ===== Layout ===============================================================
-local TREE_W, TREE_H = 296, 354
-local ICON_SIZE = 36
-local GRID_SPACING = 63
+-- Calculator layout (wider columns, larger icons)
+local TREE_W, TREE_H = 340, 388
+local ICON_SIZE = 40
+local GRID_SPACING = 70
 local NUM_COLS = 4
 local INITIAL_X, INITIAL_Y = 35, 28
 local TOP_PAD, BOTTOM_PAD = 36, 36
@@ -53,9 +54,16 @@ local COLOR_WHITE = {1.0, 1.0, 1.0, 1.0}
 local GOLD_WINS = true
 
 -- Background insets (inside each gold-bordered tree)
-local BG_INSET_L, BG_INSET_R = 8, 8
-local BG_INSET_TOP = 25
-local BG_INSET_BOTTOM = 18
+local BG_INSET_L, BG_INSET_R = 10, 10
+local BG_INSET_TOP = 28
+local BG_INSET_BOTTOM = 20
+
+-- Feature flags
+local USE_TREE_BACKGROUNDS = false -- single rotating background instead
+
+-- Background rotator timing
+local BG_ROTATE_PERIOD = 12 -- seconds fully visible
+local BG_FADE_DURATION = 2  -- seconds crossfade
 
 -- ===== Helpers ==============================================================
 
@@ -63,13 +71,7 @@ function addon:Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cFFDAA520[TC]|r " .. (msg or ""), 1, 1, 1)
 end
 
-function addon:ToggleSettingsPanel()
-    if settingsPanel:IsShown() then
-        settingsPanel:Hide()
-    else
-        settingsPanel:Show()
-    end
-end
+-- settings/info UI removed
 
 local function SplitString(s, sep)
     sep = sep or "%s"
@@ -131,39 +133,37 @@ local function ApplyGoldBorder(frame)
 end
 
 -- Stitch 4 tiles to fill exactly the 'frame' rect
+local BG_OVERSCAN = 1.15
 local function BuildTalentBackground(frame, basename)
-    -- Fill the frame with the four Blizzard tiles using original ratios
-    -- Original atlas: width = 256 + 64, height = 256 + 128
-    local W = frame:GetWidth() or 320
-    local H = frame:GetHeight() or 384
-    local wTL = W * (256 / 320)
-    local wTR = W - wTL
-    local hTL = H * (256 / 384)
-    local hBL = H - hTL
+    -- Crop via ScrollFrame so oversized tiles never bleed outside the tree
+    local atlasW, atlasH = 320, 384
+    local W, H = frame:GetWidth() or atlasW, frame:GetHeight() or atlasH
+    local s = max(W / atlasW, H / atlasH) * BG_OVERSCAN
 
-    local tl = frame:CreateTexture(nil, "BACKGROUND")
-    tl:SetTexture("Interface\\TalentFrame\\" .. basename .. "-TopLeft")
-    tl:SetWidth(wTL)
-    tl:SetHeight(hTL)
-    tl:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+    local clip = CreateFrame("ScrollFrame", nil, frame)
+    clip:SetAllPoints(frame)
+    clip:SetFrameLevel(max(0, frame:GetFrameLevel() - 1))
+    local holder = CreateFrame("Frame", nil, clip)
+    holder:SetWidth(atlasW * s)
+    holder:SetHeight(atlasH * s)
+    holder:SetPoint("CENTER", clip, "CENTER", 0, 0)
+    clip:SetScrollChild(holder)
 
-    local tr = frame:CreateTexture(nil, "BACKGROUND")
-    tr:SetTexture("Interface\\TalentFrame\\" .. basename .. "-TopRight")
-    tr:SetWidth(wTR)
-    tr:SetHeight(hTL)
-    tr:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
+    local function tile(name, w, h, point)
+        local t = holder:CreateTexture(nil, "BACKGROUND")
+        t:SetTexture("Interface\\TalentFrame\\" .. basename .. name)
+        t:SetWidth(w)
+        t:SetHeight(h)
+        t:SetPoint(point, holder, point, 0, 0)
+        return t
+    end
 
-    local bl = frame:CreateTexture(nil, "BACKGROUND")
-    bl:SetTexture("Interface\\TalentFrame\\" .. basename .. "-BottomLeft")
-    bl:SetWidth(wTL)
-    bl:SetHeight(hBL)
-    bl:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
-
-    local br = frame:CreateTexture(nil, "BACKGROUND")
-    br:SetTexture("Interface\\TalentFrame\\" .. basename .. "-BottomRight")
-    br:SetWidth(wTR)
-    br:SetHeight(hBL)
-    br:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+    local wTL, wTR = 256 * s, 64 * s
+    local hTL, hBL = 256 * s, 128 * s
+    tile("-TopLeft", wTL, hTL, "TOPLEFT")
+    tile("-TopRight", wTR, hTL, "TOPRIGHT")
+    tile("-BottomLeft", wTL, hBL, "BOTTOMLEFT")
+    tile("-BottomRight", wTR, hBL, "BOTTOMRIGHT")
 end
 
 function addon:RefreshTalentIcons()
@@ -251,6 +251,36 @@ local function currentRankCounts()
     return counts
 end
 
+-- Turtle talents data loader (for per-rank descriptions)
+local function EnsureTurtleTalentData()
+    if addon._descCache then return true end
+    if not Turtle_TalentsData then
+        if LoadAddOn then
+            pcall(LoadAddOn, "Turtle_InspectTalentsUI")
+        end
+    end
+    if not Turtle_TalentsData then return false end
+    local cache = {}
+    for class, trees in pairs(Turtle_TalentsData) do
+        cache[class] = {}
+        for t = 1, 3 do
+            cache[class][t] = {}
+            local tree = trees[t]
+            if tree then
+                -- Some builds store talents in tree.talents, others inline by index
+                local list = tree.talents or tree
+                for _, rec in pairs(list) do
+                    if type(rec) == "table" and rec.name and rec.desc then
+                        cache[class][t][rec.name] = rec.desc
+                    end
+                end
+            end
+        end
+    end
+    addon._descCache = cache
+    return true
+end
+
 -- Rebuild pickOrder by applying each pick in sequence and dropping any that
 -- no longer meet tree points or prerequisite max-rank requirements.
 function addon:RevalidatePickOrder()
@@ -301,11 +331,35 @@ end
 
 function addon:UpdateCalculatorOverlays()
     local counts = currentRankCounts()
+    local tabTotals = { [1]=0, [2]=0, [3]=0 }
+    for k, v in pairs(counts) do
+        local dash = string.find(k, "-")
+        if dash then
+            local t = tonumber(string.sub(k, 1, dash - 1))
+            if t and tabTotals[t] then
+                tabTotals[t] = tabTotals[t] + (v or 0)
+            end
+        end
+    end
     for tab, t in pairs(addon.calcTalents) do
         for idx, btn in pairs(t) do
             local id = tab .. "-" .. idx
-            local _, _, _, _, _, maxRank = GetTalentInfo(tab, idx)
+            local _, _, tier, _, _, maxRank = GetTalentInfo(tab, idx)
             local r = counts[id] or 0
+            -- availability (can pick next point)
+            local requiredPoints = ((tier or 1) - 1) * 5
+            local spent = tabTotals[tab] or 0
+            local pTier, pCol = GetTalentPrereqs(tab, idx)
+            local prereqOK = true
+            if pTier and pCol then
+                local preIndex = FindTalentByPosition(tab, pTier, pCol)
+                local _, _, _, _, _, preMaxRank = GetTalentInfo(tab, preIndex)
+                local have = counts[tab .. "-" .. preIndex] or 0
+                prereqOK = preMaxRank and have >= preMaxRank
+            end
+            local totalSpent = (tabTotals[1] + tabTotals[2] + tabTotals[3])
+            local capOK = totalSpent < 51
+            local canPick = (r < (maxRank or 0)) and (spent >= requiredPoints) and prereqOK and capOK
             if btn.rankText then
                 btn.rankText:SetText((r or 0) .. "/" .. (maxRank or 0))
                 if r > 0 then
@@ -314,7 +368,7 @@ function addon:UpdateCalculatorOverlays()
                     btn.rankText:SetTextColor(0.7, 0.72, 0.78)
                 end
             end
-            if r > 0 then
+            if r > 0 or canPick then
                 SetTexDesaturated(btn.icon, false)
                 if r == maxRank then
                     btn.border:Show()
@@ -326,10 +380,22 @@ function addon:UpdateCalculatorOverlays()
                 btn.border:Hide()
             end
         end
+        local tree = getglobal("TC_CalcTree" .. tab)
+        if tree and tree.pointsText then
+            tree.pointsText:SetText("Points: " .. (tabTotals[tab] or 0))
+        end
+    end
+    -- Update header (CLASS a/b/c | Points left: N)
+    local _, classToken = UnitClass("player")
+    local className = classToken or "CLASS"
+    local left = 51 - (tabTotals[1] + tabTotals[2] + tabTotals[3])
+    if calculatorFrame and calculatorFrame.summaryText then
+        calculatorFrame.summaryText:SetText(string.format("%s %d/%d/%d  |  Points left: %d",
+            className, tabTotals[1] or 0, tabTotals[2] or 0, tabTotals[3] or 0, max(0, left)))
     end
 end
 
-function addon:OnTalentClick(tabIndex, talentIndex)
+function addon:OnTalentClick(tabIndex, talentIndex, ownerBtn)
     -- prerequisite check vs current pickOrder (not character talents)
     local reqTier, reqColumn = GetTalentPrereqs(tabIndex, talentIndex)
     if reqTier and reqColumn then
@@ -379,15 +445,23 @@ function addon:OnTalentClick(tabIndex, talentIndex)
         end
     end
     if have < maxRank then
+        -- global cap: 51 points
+        if table.getn(self.pickOrder) >= 51 then
+            self:Print("|cFFFF0000Points cap reached (51).|r")
+            return
+        end
         tinsert(self.pickOrder, id)
         self:UpdateCalculatorOverlays()
         for t = 1, 3 do
             self:DrawPrereqGraph(getglobal("TC_CalcTree" .. t))
         end
+        if ownerBtn and GameTooltip and GameTooltip:IsOwned(ownerBtn) then
+            addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
+        end
     end
 end
 
-function addon:OnTalentRightClick(tabIndex, talentIndex)
+function addon:OnTalentRightClick(tabIndex, talentIndex, ownerBtn)
     local id = tabIndex .. "-" .. talentIndex
     for i = table.getn(self.pickOrder), 1, -1 do
         if self.pickOrder[i] == id then
@@ -397,6 +471,9 @@ function addon:OnTalentRightClick(tabIndex, talentIndex)
             self:UpdateCalculatorOverlays()
             for t = 1, 3 do
                 self:DrawPrereqGraph(getglobal("TC_CalcTree" .. t))
+            end
+            if ownerBtn and GameTooltip and GameTooltip:IsOwned(ownerBtn) then
+                addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
             end
             return
         end
@@ -786,7 +863,7 @@ function addon:CreateFrames()
     mainFrame:SetHeight(300)
     if TF then
         mainFrame:ClearAllPoints()
-        mainFrame:SetPoint("TOPLEFT", TF, "TOPRIGHT", 16, -16)
+        mainFrame:SetPoint("TOPLEFT", TF, "TOPRIGHT", 0, 0)
     else
         mainFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     end
@@ -805,6 +882,35 @@ function addon:CreateFrames()
     local title = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", mainFrame, "TOP", 0, -10)
     title:SetText("|cFFDAA520TalentCrafter|r")
+
+    -- Toggle button on the side of TalentFrame to show/hide the viewer
+    if TF and not getglobal("TC_ViewerToggle") then
+        local toggle = CreateFrame("Button", "TC_ViewerToggle", TF)
+        toggle:SetWidth(16)
+        toggle:SetHeight(40)
+        toggle:SetPoint("RIGHT", TF, "RIGHT", -2, 0)
+        local tex = toggle:CreateTexture(nil, "ARTWORK")
+        tex:SetAllPoints(true)
+        toggle.tex = tex
+        local function UpdateToggleIcon()
+            if addon.viewerCollapsed then
+                toggle.tex:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up") -- right arrow
+            else
+                toggle.tex:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up") -- left arrow
+            end
+        end
+        UpdateToggleIcon()
+        toggle:SetScript("OnClick", function()
+            addon.viewerCollapsed = not addon.viewerCollapsed
+            if addon.viewerCollapsed then
+                mainFrame:Hide()
+            else
+                mainFrame:Show()
+            end
+            UpdateToggleIcon()
+        end)
+        -- Keep viewer hidden if collapsed when TF is shown again (child hidden state persists)
+    end
 
     scrollFrame = CreateFrame("ScrollFrame", "TC_ScrollFrame", mainFrame, "UIPanelScrollFrameTemplate")
     scrollFrame:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 8, -30)
@@ -839,116 +945,7 @@ function addon:CreateFrames()
         addon.talentLines[i] = line
     end
 
-    -- settings + info
-    settingsPanel = CreateFrame("Frame", "TalentCrafterSettings", UIParent)
-    settingsPanel:SetWidth(250)
-    settingsPanel:SetHeight(120)
-    settingsPanel:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    ApplyDialogBackdrop(settingsPanel)
-    settingsPanel:Hide()
-    settingsPanel:SetMovable(true)
-    settingsPanel:EnableMouse(true)
-    settingsPanel:RegisterForDrag("LeftButton")
-    settingsPanel:SetScript(
-        "OnDragStart",
-        function()
-            this:StartMoving()
-        end
-    )
-    settingsPanel:SetScript(
-        "OnDragStop",
-        function()
-            this:StopMovingOrSizing()
-        end
-    )
-    local sTitle = settingsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    sTitle:SetPoint("TOP", settingsPanel, "TOP", 0, -10)
-    sTitle:SetText("|cFFDAA520TalentCrafter|r — Settings")
-    local sClose = CreateFrame("Button", nil, settingsPanel)
-    sClose:SetWidth(16)
-    sClose:SetHeight(16)
-    sClose:SetPoint("TOPRIGHT", settingsPanel, "TOPRIGHT", -5, -5)
-    local sc = sClose:CreateTexture(nil, "ARTWORK")
-    sc:SetAllPoints()
-    sc:SetTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Up")
-    sClose:SetScript(
-        "OnClick",
-        function()
-            settingsPanel:Hide()
-        end
-    )
-
-    infoPanel = CreateFrame("Frame", "TalentCrafterInfo", UIParent)
-    infoPanel:SetWidth(300)
-    infoPanel:SetHeight(180)
-    infoPanel:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    ApplyDialogBackdrop(infoPanel)
-    infoPanel:Hide()
-    infoPanel:SetMovable(true)
-    infoPanel:EnableMouse(true)
-    infoPanel:RegisterForDrag("LeftButton")
-    infoPanel:SetScript(
-        "OnDragStart",
-        function()
-            this:StartMoving()
-        end
-    )
-    infoPanel:SetScript(
-        "OnDragStop",
-        function()
-            this:StopMovingOrSizing()
-        end
-    )
-    local iTitle = infoPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    iTitle:SetPoint("TOP", infoPanel, "TOP", 0, -10)
-    iTitle:SetText("|cFFDAA520TalentCrafter|r — Info")
-    local iClose = CreateFrame("Button", nil, infoPanel)
-    iClose:SetWidth(16)
-    iClose:SetHeight(16)
-    iClose:SetPoint("TOPRIGHT", infoPanel, "TOPRIGHT", -5, -5)
-    local ic = iClose:CreateTexture(nil, "ARTWORK")
-    ic:SetAllPoints()
-    ic:SetTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Up")
-    iClose:SetScript(
-        "OnClick",
-        function()
-            infoPanel:Hide()
-        end
-    )
-    local infoText = infoPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    infoText:SetPoint("TOPLEFT", infoPanel, "TOPLEFT", 15, -40)
-    infoText:SetWidth(270)
-    infoText:SetJustifyH("LEFT")
-    infoText:SetText("Track talent progressions.\nCommands: /TC calc, /TC settings, /TC reset, /TC lock, /TC unlock")
-
-    local settingsButton = CreateFrame("Button", nil, mainFrame)
-    settingsButton:SetWidth(16)
-    settingsButton:SetHeight(16)
-    settingsButton:SetPoint("TOPRIGHT", mainFrame, "TOPRIGHT", -6, -6)
-    local sb = settingsButton:CreateTexture(nil, "ARTWORK")
-    sb:SetAllPoints()
-    sb:SetTexture("Interface\\Icons\\INV_Misc_Gear_01")
-    settingsButton:SetScript("OnClick", addon.ToggleSettingsPanel)
-
-    local infoButton = CreateFrame("Button", nil, settingsPanel)
-    infoButton:SetWidth(16)
-    infoButton:SetHeight(16)
-    infoButton:SetPoint("BOTTOMRIGHT", settingsPanel, "BOTTOMRIGHT", -10, 10)
-    local ib = infoButton:CreateTexture(nil, "ARTWORK")
-    ib:SetAllPoints()
-    ib:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-    infoButton:SetScript(
-        "OnClick",
-        function()
-            settingsPanel:Hide()
-            infoPanel:Show()
-        end
-    )
-    local iText = settingsPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    iText:SetPoint("RIGHT", infoButton, "LEFT", -5, 0)
-    iText:SetText("Info")
-
-    -- Removed: tie-to-talent toggle. Viewer always anchors to TalentFrame now.
+    -- settings/info removed
 
     -- Robust tier detection: fallback to 11 tiers if early snapshot is low.
     local function DetectMaxTier()
@@ -981,6 +978,9 @@ function addon:CreateFrames()
     calculatorFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     ApplyDialogBackdrop(calculatorFrame)
     calculatorFrame:Hide()
+    if UISpecialFrames then tinsert(UISpecialFrames, "TC_TalentCalculator") end
+    -- Rotating global background
+    addon:InitBackgroundRotator(calculatorFrame)
     calculatorFrame:SetMovable(true)
     calculatorFrame:EnableMouse(true)
     calculatorFrame:RegisterForDrag("LeftButton")
@@ -1000,7 +1000,8 @@ function addon:CreateFrames()
     calcTitle:SetPoint("TOP", calculatorFrame, "TOP", 0, -10)
     local _, classToken = UnitClass("player")
     local className = classToken or "UNKNOWN"
-    calcTitle:SetText(className .. " Talent Calculator")
+    calcTitle:SetText(className .. " 0/0/0  |  Points left: 51")
+    calculatorFrame.summaryText = calcTitle
     local calcClose = CreateFrame("Button", nil, calculatorFrame)
     calcClose:SetWidth(16)
     calcClose:SetHeight(16)
@@ -1038,13 +1039,23 @@ function addon:CreateFrames()
         if slash then
             base = string.sub(base, slash + 1)
         end
-        if base ~= "" then
+        -- subtle dark backing to improve contrast
+        local shade = bgFrame:CreateTexture(nil, "BACKGROUND")
+        shade:SetAllPoints(true)
+        shade:SetTexture("Interface\\Buttons\\WHITE8X8")
+        shade:SetVertexColor(0, 0, 0, 0.30)
+        -- per-tree backgrounds disabled when using global rotator
+        if USE_TREE_BACKGROUNDS and base ~= "" then
             BuildTalentBackground(bgFrame, base)
         end
 
         local tfs = tree:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         tfs:SetPoint("TOP", tree, "TOP", 0, -8)
         tfs:SetText(name or ("Tree " .. tab))
+        local pts = tree:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        pts:SetPoint("TOP", tree, "TOP", 0, -22)
+        pts:SetText("Points: 0")
+        tree.pointsText = pts
 
         tree.branchLayer = CreateFrame("Frame", nil, tree)
         tree.branchLayer:SetPoint("TOPLEFT", tree, "TOPLEFT", 0, 0)
@@ -1053,6 +1064,25 @@ function addon:CreateFrames()
         tree.arrowLayer:SetPoint("TOPLEFT", tree, "TOPLEFT", 0, 0)
         tree.arrowLayer:SetPoint("BOTTOMRIGHT", tree, "BOTTOMRIGHT", 0, 0)
         EnsurePools(tree)
+
+        -- per-tree clear button
+        local clearTree = CreateFrame("Button", nil, tree, "UIPanelButtonTemplate")
+        clearTree:SetWidth(90)
+        clearTree:SetHeight(18)
+        clearTree:SetText("Clear points")
+        clearTree:SetPoint("BOTTOM", tree, "BOTTOM", 0, 6)
+        clearTree:SetScript("OnClick", function()
+            local keep = {}
+            for _, id in ipairs(addon.pickOrder) do
+                local dash = string.find(id, "-")
+                local t = tonumber(string.sub(id, 1, dash - 1))
+                if t ~= tree._tab then tinsert(keep, id) end
+            end
+            addon.pickOrder = keep
+            if addon.RevalidatePickOrder then addon:RevalidatePickOrder() end
+            addon:UpdateCalculatorOverlays()
+            for i = 1, 3 do addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. i)) end
+        end)
     end
 
     -- buttons (talent icons)
@@ -1078,17 +1108,20 @@ function addon:CreateFrames()
             btn.rankText:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -2, 2)
             btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
             local T, I = tab, idx
-            btn:SetScript(
-                "OnClick",
-                function(_, button)
-                    local b = button or arg1
-                    if b == "LeftButton" or b == "LeftButtonUp" then
-                        addon:OnTalentClick(T, I)
-                    elseif b == "RightButton" or b == "RightButtonUp" then
-                        addon:OnTalentRightClick(T, I)
-                    end
+            btn:SetScript("OnEnter", function()
+                addon:ShowTalentTooltip(btn, T, I)
+            end)
+            btn:SetScript("OnLeave", function()
+                GameTooltip:Hide()
+            end)
+            btn:SetScript("OnClick", function(self, button)
+                local b = button or arg1
+                if b == "LeftButton" or b == "LeftButtonUp" then
+                    addon:OnTalentClick(T, I, self)
+                elseif b == "RightButton" or b == "RightButtonUp" then
+                    addon:OnTalentRightClick(T, I, self)
                 end
-            )
+            end)
             addon.calcTalents[tab][idx] = btn
         end
         addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
@@ -1227,9 +1260,6 @@ eventFrame:SetScript(
     "OnEvent",
     function()
         if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
-            if not TC_SavedSettings then
-                TC_SavedSettings = {tieToTalent = false}
-            end
             if not TC_CustomBuilds then
                 TC_CustomBuilds = {}
             end
@@ -1326,9 +1356,7 @@ function SlashCmdList.TC(msg)
         end
     end
     local cmd = string.lower(msg or "")
-    if cmd == "settings" then
-        settingsPanel:Show()
-    elseif cmd == "calc" then
+    if cmd == "calc" then
         if UnitLevel("player") < 10 then
             addon:Print("You must be at least level 10 to use the talent calculator.")
             return
@@ -1348,12 +1376,6 @@ function SlashCmdList.TC(msg)
         addon:UpdateTalentDisplay()
         addon:UpdateGlow()
         addon:Print("Guide reset to default.")
-    elseif cmd == "lock" then
-        mainFrame:SetMovable(false)
-        addon:Print("Addon Frame |cFFFF8080Locked|r.")
-    elseif cmd == "unlock" then
-        mainFrame:SetMovable(true)
-        addon:Print("Addon Frame |cFF00FF00Unlocked|r.")
     elseif talentGuides[string.upper(cmd)] ~= nil then
         manualOverride = true
         local sel = string.upper(cmd)
@@ -1372,6 +1394,51 @@ function SlashCmdList.TC(msg)
             end
         end
     else
-        addon:Print("Usage: /tc [calc | settings | reset | lock | unlock]")
+        addon:Print("Usage: /tc [calc | reset]")
     end
+end
+-- Rotating background for calculator
+function addon:InitBackgroundRotator(frame)
+    local bases = {}
+    for t=1,3 do
+        local _, _, _, bg = GetTalentTabInfo(t)
+        if bg then
+            local base = bg
+            local slash = string.find(base, "[/\\][^/\\]*$")
+            if slash then base = string.sub(base, slash + 1) end
+            if base ~= "" then tinsert(bases, base) end
+        end
+    end
+    if table.getn(bases) == 0 then return end
+    frame._bgFrames = {}
+    for i, base in ipairs(bases) do
+        local holder = CreateFrame("Frame", nil, frame)
+        holder:SetAllPoints(frame)
+        holder:SetFrameLevel(max(0, frame:GetFrameLevel() - 2))
+        BuildTalentBackground(holder, base)
+        holder:SetAlpha(i == 1 and 1 or 0)
+        frame._bgFrames[i] = holder
+    end
+    frame._bgIndex = 1
+    frame._bgTimer = 0
+    frame:SetScript("OnUpdate", function()
+        frame._bgTimer = frame._bgTimer + arg1
+        local n = table.getn(frame._bgFrames)
+        if n <= 1 then return end
+        local t = frame._bgTimer % (BG_ROTATE_PERIOD + BG_FADE_DURATION)
+        local active = frame._bgIndex
+        local nextIndex = active % n + 1
+        if t < BG_ROTATE_PERIOD then
+            frame._bgFrames[active]:SetAlpha(1)
+            frame._bgFrames[nextIndex]:SetAlpha(0)
+        else
+            local f = (t - BG_ROTATE_PERIOD) / BG_FADE_DURATION
+            if f > 1 then f = 1 end
+            frame._bgFrames[active]:SetAlpha(1 - f)
+            frame._bgFrames[nextIndex]:SetAlpha(f)
+            if f >= 1 then
+                frame._bgIndex = nextIndex
+            end
+        end
+    end)
 end
