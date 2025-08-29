@@ -263,7 +263,7 @@ function addon:OnTalentClick(tabIndex, talentIndex)
     if reqTier and reqColumn then
         local pre = FindTalentByPosition(tabIndex, reqTier, reqColumn)
         if pre then
-            local preName = GetTalentInfo(tabIndex, pre)
+            local preName, _, _, _, _, preMaxRank = GetTalentInfo(tabIndex, pre)
             local preId = tabIndex .. "-" .. pre
             local have = 0
             for _, v in ipairs(self.pickOrder) do
@@ -271,8 +271,8 @@ function addon:OnTalentClick(tabIndex, talentIndex)
                     have = have + 1
                 end
             end
-            if have < 1 then
-                self:Print("|cFFFF0000Requires at least 1 point in " .. (preName or "that talent") .. "|r")
+            if preMaxRank and have < preMaxRank then
+                self:Print("|cFFFF0000Requires max rank in " .. (preName or "that talent") .. "|r")
                 return
             end
         end
@@ -323,8 +323,19 @@ function addon:ImportFromString(s)
     addon.pickOrder = {}
     if data then
         for _, id in ipairs(SplitString(data, ",")) do
-            if string.find(id, "-") then
-                tinsert(addon.pickOrder, id)
+            -- Strict token check: only TAB-INDEX with digits
+            if string.find(id, "^%d+%-%d+$") then
+                local parts = SplitString(id, "-")
+                local tab = tonumber(parts[1])
+                local idx = tonumber(parts[2])
+                if tab and idx and tab >= 1 and tab <= (GetNumTalentTabs() or 0) then
+                    if idx >= 1 and idx <= (GetNumTalents(tab) or 0) then
+                        local name = GetTalentInfo(tab, idx)
+                        if name then
+                            tinsert(addon.pickOrder, id)
+                        end
+                    end
+                end
             end
         end
     end
@@ -496,9 +507,10 @@ local function BuildGraphs(tree, counts)
         local pTier, pCol = GetTalentPrereqs(tree._tab, idx)
         if pTier and pCol then
             local preIndex = FindTalentByPosition(tree._tab, pTier, pCol)
-            -- GOLD only when you have at least 1 point in the prerequisite
+            -- GOLD only when you have the prerequisite fully ranked
             local have = counts[tree._tab .. "-" .. preIndex] or 0
-            local target = (have >= 1) and met or unmet
+            local _, _, _, _, _, preMaxRank = GetTalentInfo(tree._tab, preIndex)
+            local target = (preMaxRank and have >= preMaxRank) and met or unmet
 
             if bCol == pCol then
                 -- vertical
@@ -939,7 +951,7 @@ function addon:CreateFrames()
         bgFrame:SetWidth(TREE_W - (BG_INSET_L + BG_INSET_R))
         bgFrame:SetHeight(gridHeight)
         bgFrame:SetPoint("TOPLEFT", tree, "TOPLEFT", BG_INSET_L, -BG_INSET_TOP)
-        bgFrame:SetFrameLevel(tree:GetFrameLevel() - 1)
+        bgFrame:SetFrameLevel(max(0, tree:GetFrameLevel() - 1))
         tree.bgFrame = bgFrame
 
         local base = background or ""
@@ -1087,7 +1099,12 @@ function addon:CreateFrames()
     save:SetScript(
         "OnClick",
         function()
-            TC_CustomBuilds[playerClass] = addon.pickOrder
+            -- Snapshot the current pickOrder to avoid aliasing the saved build
+            local copy = {}
+            for i, v in ipairs(addon.pickOrder) do
+                copy[i] = v
+            end
+            TC_CustomBuilds[playerClass] = copy
             addon:SaveAndUseCustomBuild()
         end
     )
