@@ -1,0 +1,8 @@
+## Interface: 11200
+## Title: TalentCrafter
+## Notes: Talent calculator + guide with fixed init and proper prereq coloring.
+## Author: OrionAF
+## Version: 1.0.1
+## SavedVariables: TC_SavedSettings, TC_CustomBuilds
+
+TalentCrafter.lua
