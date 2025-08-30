@@ -1193,7 +1193,11 @@ function addon:CreateFrames()
     calculatorFrame:SetWidth(3 * (TREE_W + 20) + 40)
     calculatorFrame:SetHeight(TREE_H + 100)
     calculatorFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    -- Use a lighter backdrop so rotating background art is visible
     ApplyDialogBackdrop(calculatorFrame)
+    if calculatorFrame.SetBackdropColor then
+        calculatorFrame:SetBackdropColor(0, 0, 0, 0.35)
+    end
     calculatorFrame:Hide()
     if UISpecialFrames then tinsert(UISpecialFrames, "TC_TalentCalculator") end
     -- Rotating global background
@@ -1256,11 +1260,7 @@ function addon:CreateFrames()
         if slash then
             base = string.sub(base, slash + 1)
         end
-        -- subtle dark backing to improve contrast
-        local shade = bgFrame:CreateTexture(nil, "BACKGROUND")
-        shade:SetAllPoints(true)
-        shade:SetTexture("Interface\\Buttons\\WHITE8X8")
-        shade:SetVertexColor(0, 0, 0, 0.30)
+        -- remove old dark backing overlay to let the global background show through
         -- per-tree backgrounds disabled when using global rotator
         if USE_TREE_BACKGROUNDS and base ~= "" then
             BuildTalentBackground(bgFrame, base)
@@ -1477,42 +1477,47 @@ end
 -- ===== Events ===============================================================
 
 local eventFrame = CreateFrame("Frame")
+local function HookTalentFrameOnShow()
+    local TF = getglobal("TalentFrame")
+    if TF and not TF._tcHooked then
+        TF._tcHooked = true
+        local prev = TF:GetScript("OnShow")
+        TF:SetScript("OnShow", function()
+            if prev then prev() end
+            if not addon.isInitialized then
+                addon:TryInitializeNow()
+            end
+        end)
+    end
+end
 eventFrame:SetScript(
     "OnEvent",
     function()
-        if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
-            if not TC_CustomBuilds then
-                TC_CustomBuilds = {}
-            end
-            -- Re-evaluate class to be safe on late cores
-            _, playerClass = UnitClass("player")
-            if TC_CustomBuilds[playerClass] then
-                addon.pickOrder = TC_CustomBuilds[playerClass]
-            else
-                addon.pickOrder = {}
-            end
-            -- do NOT create frames here; wait until PLAYER_LOGIN when all core data is ready
-            this:UnregisterEvent("ADDON_LOADED")
-        elseif event == "PLAYER_LOGIN" then
-            -- Defer frame creation until talent data is ready (some cores are late)
-            local function TalentDataReady()
-                local tabs = GetNumTalentTabs() or 0
-                if tabs < 1 then return false end
-                for t = 1, tabs do
-                    local n = GetNumTalents(t)
-                    if not n or n == 0 then
-                        return false
-                    end
+        if event == "ADDON_LOADED" then
+            if arg1 == ADDON_NAME then
+                if not TC_CustomBuilds then
+                    TC_CustomBuilds = {}
                 end
-                return true
+                -- Re-evaluate class to be safe on late cores
+                _, playerClass = UnitClass("player")
+                if TC_CustomBuilds[playerClass] then
+                    addon.pickOrder = TC_CustomBuilds[playerClass]
+                else
+                    addon.pickOrder = {}
+                end
+            elseif arg1 == "Blizzard_TalentUI" then
+                -- If Blizzard Talent UI just loaded, try to initialize now
+                if not addon.isInitialized then
+                    addon:TryInitializeNow()
+                end
+                HookTalentFrameOnShow()
             end
-
-            if TalentDataReady() then
-                addon:CreateFrames()
-            else
-                -- Try again when spells/talent data loads
+        elseif event == "PLAYER_LOGIN" then
+            -- Try to initialize immediately; fall back to SPELLS_CHANGED if not ready
+            if not addon:TryInitializeNow() then
                 eventFrame:RegisterEvent("SPELLS_CHANGED")
             end
+            HookTalentFrameOnShow()
         elseif event == "SPELLS_CHANGED" then
             if not addon.isInitialized then
                 local tabs = GetNumTalentTabs() or 0
@@ -1551,7 +1556,7 @@ eventFrame:RegisterEvent("PLAYER_LEVEL_UP")
 -- ===== Slash ================================================================
 SLASH_TC1, SLASH_TC2 = "/tc", "/TC"
 
-local function TryInitializeNow()
+function addon:TryInitializeNow()
     if addon.isInitialized then return true end
     -- Try to load Blizzard Talent UI and create frames if data is ready
     if not IsAddOnLoaded("Blizzard_TalentUI") then
@@ -1573,7 +1578,7 @@ end
 
 function SlashCmdList.TC(msg)
     if not addon.isInitialized then
-        if not TryInitializeNow() then
+        if not addon:TryInitializeNow() then
             addon:Print("Talent data not ready yet; try again in a moment.")
             return
         end
@@ -1614,21 +1619,44 @@ end
 function addon:InitBackgroundRotator(frame)
     if not ROTATING_BACKGROUNDS or table.getn(ROTATING_BACKGROUNDS) == 0 then return end
     local frames = {}
+
+    local function trySetTexture(tex, path)
+        if not path or path == "" then return false end
+        tex:SetTexture(path)
+        return tex:GetTexture() ~= nil
+    end
+
     for i, art in ipairs(ROTATING_BACKGROUNDS) do
         local holder = CreateFrame("Frame", nil, frame)
         holder:SetAllPoints(frame)
-        -- Draw above the calculator backdrop but behind tree artwork
-        holder:SetFrameLevel(frame:GetFrameLevel())
-        local tex = holder:CreateTexture(nil, "BACKGROUND")
+        holder:EnableMouse(false)
+        -- Ensure we render above calculator backdrop but beneath tree widgets
+        holder:SetFrameStrata(frame:GetFrameStrata())
+        holder:SetFrameLevel((frame:GetFrameLevel() or 0) + 1)
+
+        local tex = holder:CreateTexture(nil, "ARTWORK")
         tex:SetAllPoints(holder)
-        tex:SetTexture(art.texture)
-        holder.tex = tex
-        if holder.tex:GetTexture() then
-            tinsert(frames, holder)
-        else
-            holder:Hide()
+
+        -- Prefer provided texture; if it fails, attempt common alternate ext
+        local ok = trySetTexture(tex, art.texture)
+        if not ok and type(art.texture) == "string" then
+            local base = art.texture
+            base = string.gsub(base, "%.tga$", "")
+            -- Prefer BLP first on Vanilla
+            ok = trySetTexture(tex, base .. ".blp")
+                or trySetTexture(tex, base .. ".tga")
+                or trySetTexture(tex, base .. ".TGA")
         end
+
+        holder.tex = tex
+        if not ok then
+            -- Fallback to a tinted solid so there's always a visible background
+            tex:SetTexture("Interface\\Buttons\\WHITE8X8")
+            tex:SetVertexColor(0.08, 0.07, 0.10, 0.7)
+        end
+        tinsert(frames, holder)
     end
+
     if table.getn(frames) == 0 then return end
     frame._bgFrames = frames
     for i, h in ipairs(frame._bgFrames) do
@@ -1640,9 +1668,11 @@ function addon:InitBackgroundRotator(frame)
         frame._bgTimer = frame._bgTimer + arg1
         local n = table.getn(frame._bgFrames)
         if n <= 1 then return end
-        local t = math.fmod(frame._bgTimer, (BG_ROTATE_PERIOD + BG_FADE_DURATION))
+        local cycle = (BG_ROTATE_PERIOD + BG_FADE_DURATION)
+        -- Lua 5.0 (1.12) lacks math.fmod/% in some clients; do manual modulo
+        local t = frame._bgTimer - math.floor(frame._bgTimer / cycle) * cycle
         local active = frame._bgIndex
-        local nextIndex = math.fmod(active, n) + 1
+        local nextIndex = (active < n) and (active + 1) or 1
         if t < BG_ROTATE_PERIOD then
             frame._bgFrames[active]:SetAlpha(1)
             frame._bgFrames[nextIndex]:SetAlpha(0)
