@@ -3,6 +3,6 @@
 ## Notes: Talent calculator + talent list viewer for TWOW
 ## Author: OrionAF
 ## Version: 1.0.3
-## SavedVariables: TC_CustomBuilds
+## SavedVariables: TC_CustomBuilds, TC_Settings
 
 TalentCrafter.lua
