@@ -1533,9 +1533,9 @@ function addon:InitBackgroundRotator(frame)
         frame._bgTimer = frame._bgTimer + arg1
         local n = table.getn(frame._bgFrames)
         if n <= 1 then return end
-        local t = frame._bgTimer % (BG_ROTATE_PERIOD + BG_FADE_DURATION)
+        local t = math.fmod(frame._bgTimer, (BG_ROTATE_PERIOD + BG_FADE_DURATION))
         local active = frame._bgIndex
-        local nextIndex = active % n + 1
+        local nextIndex = math.fmod(active, n) + 1
         if t < BG_ROTATE_PERIOD then
             frame._bgFrames[active]:SetAlpha(1)
             frame._bgFrames[nextIndex]:SetAlpha(0)
