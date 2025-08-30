@@ -399,29 +399,85 @@ end
 function addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
     if not ownerBtn or not GameTooltip then return end
     GameTooltip:SetOwner(ownerBtn, "ANCHOR_RIGHT")
-    if GameTooltip.SetTalent then
-        GameTooltip:SetTalent(tabIndex, talentIndex)
-    end
+    GameTooltip:ClearLines()
 
-    -- Use calculator's planned rank for "Next rank" preview, not character rank
-    local name, _, _, _, _, maxRank = GetTalentInfo(tabIndex, talentIndex)
+    -- Always base tooltip on calculator state, not character talents.
+    local name, _, tier, column, _, maxRank = GetTalentInfo(tabIndex, talentIndex)
     local counts = currentRankCounts()
     local id = tabIndex .. "-" .. talentIndex
-    local planned = counts[id] or 0
-    if maxRank and planned < maxRank and EnsureTurtleTalentData() then
+    -- Try to read the displayed rank directly from the button text first
+    local plannedFromText, maxFromText
+    if ownerBtn and ownerBtn.rankText and ownerBtn.rankText.GetText then
+        local rt = ownerBtn.rankText:GetText()
+        if type(rt) == "string" then
+            local a, b = string.match(rt, "^(%d+)%s*/%s*(%d+)$")
+            if a then plannedFromText = tonumber(a) end
+            if b then maxFromText = tonumber(b) end
+        end
+    end
+    -- Prefer button-cached values if available (most accurate mid-click),
+    -- then recomputed counts, then the parsed text from the icon (last resort)
+    local planned = (ownerBtn and ownerBtn._planned) or counts[id] or plannedFromText or 0
+    maxRank = (ownerBtn and ownerBtn._maxRank) or maxFromText or maxRank or 0
+
+    -- Header + planned rank
+    GameTooltip:AddLine(name or "(unknown)", 1, 1, 1)
+    GameTooltip:AddLine("Rank " .. planned .. "/" .. maxRank, 0.9, 0.9, 0.9)
+
+    -- Current and next rank descriptions from Turtle data (if available)
+    if EnsureTurtleTalentData() then
         local descTable = addon._descCache and addon._descCache[playerClass]
-        if descTable and descTable[tabIndex] then
-            local list = descTable[tabIndex][name]
-            if type(list) == "table" then
+        local list = descTable and descTable[tabIndex] and descTable[tabIndex][name]
+        if type(list) == "table" then
+            if planned > 0 then
+                local curText = list[planned]
+                if type(curText) == "string" and curText ~= "" then
+                    GameTooltip:AddLine(" ")
+                    GameTooltip:AddLine("Current rank:", 1, 0.82, 0)
+                    GameTooltip:AddLine(curText, 1, 1, 1, true)
+                end
+            end
+            if planned < (maxRank or 0) then
                 local nextText = list[planned + 1]
                 if type(nextText) == "string" and nextText ~= "" then
                     GameTooltip:AddLine(" ")
-                    GameTooltip:AddLine("Next rank (calculator):", 1, 0.82, 0)
+                    GameTooltip:AddLine("Next rank:", 1, 0.82, 0)
                     GameTooltip:AddLine(nextText, 1, 1, 1, true)
                 end
             end
         end
     end
+
+    -- Requirements based on calculator state
+    local reqPoints = ((tier or 1) - 1) * 5
+    if reqPoints and reqPoints > 0 then
+        local tabSpent = 0
+        for k, v in pairs(counts) do
+            local dash = string.find(k, "-")
+            if dash then
+                local t = tonumber(string.sub(k, 1, dash - 1))
+                if t == tabIndex then tabSpent = tabSpent + v end
+            end
+        end
+        local ok = tabSpent >= reqPoints
+        local r, g, b = (ok and 0.7 or 1), (ok and 0.9 or 0), (ok and 0.7 or 0)
+        local tabName = GetTalentTabInfo(tabIndex)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Requires " .. reqPoints .. " points in " .. (tabName or "this tree"), r, g, b)
+    end
+
+    local pTier, pCol = GetTalentPrereqs(tabIndex, talentIndex)
+    if pTier and pCol then
+        local preIndex = FindTalentByPosition(tabIndex, pTier, pCol)
+        if preIndex then
+            local preName, _, _, _, _, preMaxRank = GetTalentInfo(tabIndex, preIndex)
+            local havePre = counts[tabIndex .. "-" .. preIndex] or 0
+            local ok = preMaxRank and havePre >= preMaxRank
+            local r, g, b = (ok and 0.7 or 1), (ok and 0.9 or 0), (ok and 0.7 or 0)
+            GameTooltip:AddLine("Requires max rank in " .. (preName or "that talent"), r, g, b)
+        end
+    end
+
     GameTooltip:Show()
 end
 
@@ -490,6 +546,9 @@ function addon:UpdateCalculatorOverlays()
             local id = tab .. "-" .. idx
             local _, _, tier, _, _, maxRank = GetTalentInfo(tab, idx)
             local r = counts[id] or 0
+            -- expose planned/max for tooltip to read
+            btn._planned = r
+            btn._maxRank = maxRank or 0
             -- availability (can pick next point)
             local requiredPoints = ((tier or 1) - 1) * 5
             local spent = tabTotals[tab] or 0
@@ -595,11 +654,17 @@ function addon:OnTalentClick(tabIndex, talentIndex, ownerBtn)
             return
         end
         tinsert(self.pickOrder, id)
+        -- Prime the hovered button with the post-click planned rank so
+        -- tooltip refresh uses the up-to-date value even before overlays run.
+        if ownerBtn then
+            ownerBtn._planned = (have or 0) + 1
+            ownerBtn._maxRank = maxRank or 0
+        end
         self:UpdateCalculatorOverlays()
         for t = 1, 3 do
             self:DrawPrereqGraph(getglobal("TC_CalcTree" .. t))
         end
-        if ownerBtn and GameTooltip and GameTooltip:IsOwned(ownerBtn) then
+        if ownerBtn and GameTooltip then
             addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
         end
     end
@@ -612,11 +677,18 @@ function addon:OnTalentRightClick(tabIndex, talentIndex, ownerBtn)
             table.remove(self.pickOrder, i)
             -- Revalidate the remaining picks after removal
             if self.RevalidatePickOrder then self:RevalidatePickOrder() end
+            -- Update cached planned rank for hovered button before overlays
+            if ownerBtn then
+                local counts = currentRankCounts()
+                ownerBtn._planned = counts[id] or 0
+                local _, _, _, _, _, maxRank = GetTalentInfo(tabIndex, talentIndex)
+                ownerBtn._maxRank = maxRank or 0
+            end
             self:UpdateCalculatorOverlays()
             for t = 1, 3 do
                 self:DrawPrereqGraph(getglobal("TC_CalcTree" .. t))
             end
-            if ownerBtn and GameTooltip and GameTooltip:IsOwned(ownerBtn) then
+            if ownerBtn and GameTooltip then
                 addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
             end
             return
@@ -1251,20 +1323,24 @@ function addon:CreateFrames()
             btn.border:Hide()
             btn.rankText = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             btn.rankText:SetPoint("BOTTOMRIGHT", btn, "BOTTOMRIGHT", -2, 2)
+            -- cache indices for reliable tooltip refresh
+            btn._tabIndex = tab
+            btn._talentIndex = idx
             btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
             local T, I = tab, idx
+            -- Vanilla 1.12 scripts do not pass 'self'; use captured btn
             btn:SetScript("OnEnter", function()
                 addon:ShowTalentTooltip(btn, T, I)
             end)
             btn:SetScript("OnLeave", function()
                 GameTooltip:Hide()
             end)
-            btn:SetScript("OnClick", function(self, button)
-                local b = button or arg1
+            btn:SetScript("OnClick", function()
+                local b = arg1
                 if b == "LeftButton" or b == "LeftButtonUp" then
-                    addon:OnTalentClick(T, I, self)
+                    addon:OnTalentClick(T, I, this)
                 elseif b == "RightButton" or b == "RightButtonUp" then
-                    addon:OnTalentRightClick(T, I, self)
+                    addon:OnTalentRightClick(T, I, this)
                 end
             end)
             addon.calcTalents[tab][idx] = btn
