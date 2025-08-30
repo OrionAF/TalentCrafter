@@ -3,6 +3,8 @@
 -- ============================================================================
 local ADDON_NAME = "TalentCrafter"
 local addon = {isInitialized = false, talentLines = {}, calcTalents = {}, pickOrder = {}, viewerCollapsed = false}
+local floor = math.floor
+local gmatch = string.gmatch or string.gfind
 local mainFrame, calculatorFrame, exportFrame, importFrame, scrollFrame
 
 -- No default guides — keep these nil.
@@ -65,18 +67,47 @@ local USE_TREE_BACKGROUNDS = false -- single rotating background instead
 local BG_ROTATE_PERIOD = 12 -- seconds fully visible
 local BG_FADE_DURATION = 2  -- seconds crossfade
 
+-- Rotating background artwork and credits
+local ROTATING_BACKGROUNDS = {
+    { title = "Kruul Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Kruul_Artwork-9NZvwXa5.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Grim Reaches Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Reaches_Illustration-CKnIkp8J.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Lava Boss Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lava_Boss_Illustration-DQ5NMiUr.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Ironforge Music Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\ironforge_music-v9UaA8rv.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Development Basement Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Development_Basement_Artwork-BiuxhgEt.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Game Master Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\GM_Artwork_2-CqBmxCUw.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Northwind Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art-G4megDko.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Northwind Artwork 2", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art_2-CQLL-0c5.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Priest T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\priest_t35-YgnbD4cD.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Rogue/Mage T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\rogue_mage-CU3g3NMm.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Shaman/Warrior T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Shaman_Warrior_T35-De9CB99x.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Paladin/Warlock T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\paladin_lock-CDrowJpy.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Grim Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Illustration-DkIvprkp.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Level One Lunatic", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lvl1_Lunatic_Illustration-Db_TSBev.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Sorrowguard Keep", texture = "Interface\\AddOns\\TalentCrafter\\Art\\sorrowguard_keep--0OJ7CDV.jpeg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Undead Hunter Tier 3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Undead_Hunter_Tier35-CkrDOGh2.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Turtle WoW Anniversary", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Turtle_Wow_Anniversary_Illustration-CRmrlq8g.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Rooting out the Evil", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Druid_Tier_Illustration_4k-DqXsG0qV.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Gnarlmoon", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Gnarlmoon2-Dh6Bzpg4.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Karazhan Anomalus", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Karazhan-Anomalus-Illustration-NQVAlUVc.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Stormwrought Ruins", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Balor_Illustration-DjIXovEQ.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Beyond the Greymane Wall", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_giln-D3cVat7-.png", artist = "Stonegut" },
+    { title = "Deep in the Green", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Deep_in_the_Green-BNW_slvT.png", artist = "Mikkel Lund Molberg" },
+    { title = "Mysteries of Azeroth", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_adventurers-DaDn9dmG.png", artist = "Misho Tenev" },
+    { title = "Crescent Grove", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_crescent_grove_no_logo-BaLvmZRm.png", artist = "Ghor" }
+}
+
 -- ===== Helpers ==============================================================
 
 function addon:Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cFFDAA520[TC]|r " .. (msg or ""), 1, 1, 1)
 end
 
--- settings/info UI removed
+-- settings UI removed
 
 local function SplitString(s, sep)
     sep = sep or "%s"
     local t = {}
-    for str in string.gfind(s or "", "([^" .. sep .. "]+)") do
+    for str in gmatch(s or "", "([^" .. sep .. "]+)") do
         tinsert(t, str)
     end
     return t
@@ -132,12 +163,82 @@ local function ApplyGoldBorder(frame)
     frame:SetBackdropBorderColor(1.0, 0.84, 0.0, 0.9)
 end
 
+-- Info window showing background credits
+local function BuildInfoFrame()
+    if addon.infoFrame then return end
+    local f = CreateFrame("Frame", "TC_InfoFrame", UIParent)
+    f:SetWidth(420)
+    f:SetHeight(480)
+    f:SetPoint("CENTER")
+    ApplyDialogBackdrop(f)
+    f:EnableMouse(true)
+    f:SetMovable(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+
+    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+    close:SetPoint("TOPRIGHT", f, "TOPRIGHT")
+
+    local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOP", 0, -10)
+    title:SetText("TalentCrafter Info")
+
+    local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT", 16, -40)
+    scroll:SetPoint("BOTTOMRIGHT", -32, 16)
+    local content = CreateFrame("Frame", nil, scroll)
+    content:SetWidth(360)
+    scroll:SetScrollChild(content)
+
+    local y = 0
+    local intro = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    intro:SetPoint("TOPLEFT", 0, y)
+    intro:SetWidth(360)
+    intro:SetJustifyH("LEFT")
+    intro:SetText("Background artwork credits:")
+    y = y - 18
+
+    for _, art in ipairs(ROTATING_BACKGROUNDS) do
+        local line = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        line:SetPoint("TOPLEFT", 0, y)
+        line:SetWidth(360)
+        line:SetJustifyH("LEFT")
+        local txt = art.title .. " — " .. art.artist
+        if art.website then
+            txt = txt .. " (" .. art.website .. ")"
+        end
+        line:SetText(txt)
+        y = y - 14
+    end
+    content:SetHeight(-y + 20)
+    addon.infoFrame = f
+end
+
+function addon:ToggleInfo()
+    if not addon.infoFrame then BuildInfoFrame() end
+    if addon.infoFrame:IsShown() then
+        addon.infoFrame:Hide()
+    else
+        addon.infoFrame:Show()
+    end
+end
+
 -- Stitch 4 tiles to fill exactly the 'frame' rect
 local BG_OVERSCAN = 1.15
 local function BuildTalentBackground(frame, basename)
+    -- Wait for valid size before drawing
+    local W, H = frame:GetWidth(), frame:GetHeight()
+    if not W or not H or W <= 0 or H <= 0 then
+        frame:SetScript("OnSizeChanged", function(self)
+            self:SetScript("OnSizeChanged", nil)
+            BuildTalentBackground(self, basename)
+        end)
+        return
+    end
+
     -- Crop via ScrollFrame so oversized tiles never bleed outside the tree
     local atlasW, atlasH = 320, 384
-    local W, H = frame:GetWidth() or atlasW, frame:GetHeight() or atlasH
     local s = max(W / atlasW, H / atlasH) * BG_OVERSCAN
 
     local clip = CreateFrame("ScrollFrame", nil, frame)
@@ -279,6 +380,54 @@ local function EnsureTurtleTalentData()
     end
     addon._descCache = cache
     return true
+end
+
+-- Display talent tooltip with Turtle per-rank data
+function addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
+    if not ownerBtn or not GameTooltip then return end
+
+    local name, _, _, _, _, maxRank = GetTalentInfo(tabIndex, talentIndex)
+    if not name then return end
+
+    local id = tabIndex .. "-" .. talentIndex
+    local have = 0
+    for _, v in ipairs(addon.pickOrder) do
+        if v == id then have = have + 1 end
+    end
+
+    GameTooltip:SetOwner(ownerBtn, "ANCHOR_RIGHT")
+
+    if EnsureTurtleTalentData() then
+        local descTable = addon._descCache and addon._descCache[playerClass]
+        local list = descTable and descTable[tabIndex] and descTable[tabIndex][name]
+
+        GameTooltip:ClearLines()
+        GameTooltip:AddLine(name, 1, 1, 1)
+        GameTooltip:AddLine(string.format("Rank %d/%d", have, maxRank), 1, 1, 1)
+
+        if type(list) == "table" then
+            local idx = have > 0 and have or 1
+            local currText = list[idx]
+            if type(currText) == "string" and currText ~= "" then
+                GameTooltip:AddLine(currText, 1, 1, 1, true)
+            end
+            if have < maxRank then
+                local nextText = list[have + 1]
+                if type(nextText) == "string" and nextText ~= "" then
+                    GameTooltip:AddLine(" ")
+                    GameTooltip:AddLine("Next rank:", 1, 0.82, 0)
+                    GameTooltip:AddLine(nextText, 1, 1, 1, true)
+                end
+            end
+        end
+    else
+        GameTooltip:SetTalent(tabIndex, talentIndex)
+        if GameTooltipTextLeft2 then
+            GameTooltipTextLeft2:SetText(string.format("Rank %d/%d", have, maxRank))
+        end
+    end
+
+    GameTooltip:Show()
 end
 
 -- Rebuild pickOrder by applying each pick in sequence and dropping any that
@@ -945,7 +1094,7 @@ function addon:CreateFrames()
         addon.talentLines[i] = line
     end
 
-    -- settings/info removed
+    -- settings panel removed
 
     -- Robust tier detection: fallback to 11 tiers if early snapshot is low.
     local function DetectMaxTier()
@@ -986,14 +1135,14 @@ function addon:CreateFrames()
     calculatorFrame:RegisterForDrag("LeftButton")
     calculatorFrame:SetScript(
         "OnDragStart",
-        function()
-            this:StartMoving()
+        function(self)
+            self:StartMoving()
         end
     )
     calculatorFrame:SetScript(
         "OnDragStop",
-        function()
-            this:StopMovingOrSizing()
+        function(self)
+            self:StopMovingOrSizing()
         end
     )
     local calcTitle = calculatorFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -1114,14 +1263,14 @@ function addon:CreateFrames()
             btn:SetScript("OnLeave", function()
                 GameTooltip:Hide()
             end)
-            btn:SetScript("OnClick", function(self, button)
-                local b = button or arg1
-                if b == "LeftButton" or b == "LeftButtonUp" then
-                    addon:OnTalentClick(T, I, self)
-                elseif b == "RightButton" or b == "RightButtonUp" then
-                    addon:OnTalentRightClick(T, I, self)
-                end
-            end)
+                btn:SetScript("OnClick", function(self, button)
+                    local b = button
+                    if b == "LeftButton" or b == "LeftButtonUp" then
+                        addon:OnTalentClick(T, I, self)
+                    elseif b == "RightButton" or b == "RightButtonUp" then
+                        addon:OnTalentRightClick(T, I, self)
+                    end
+                end)
             addon.calcTalents[tab][idx] = btn
         end
         addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
@@ -1255,75 +1404,75 @@ end
 
 -- ===== Events ===============================================================
 
-local eventFrame = CreateFrame("Frame")
-eventFrame:SetScript(
-    "OnEvent",
-    function()
-        if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
-            if not TC_CustomBuilds then
-                TC_CustomBuilds = {}
-            end
-            if TC_CustomBuilds[playerClass] then
-                addon.pickOrder = TC_CustomBuilds[playerClass]
-            else
-                addon.pickOrder = {}
-            end
-            -- do NOT create frames here; wait until PLAYER_LOGIN when all core data is ready
-            this:UnregisterEvent("ADDON_LOADED")
-        elseif event == "PLAYER_LOGIN" then
-            -- Defer frame creation until talent data is ready (some cores are late)
-            local function TalentDataReady()
-                local tabs = GetNumTalentTabs() or 0
-                if tabs < 1 then return false end
-                for t = 1, tabs do
-                    local n = GetNumTalents(t)
-                    if not n or n == 0 then
-                        return false
-                    end
+    local eventFrame = CreateFrame("Frame")
+    eventFrame:SetScript(
+        "OnEvent",
+        function(self, event, arg1)
+            if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
+                if not TC_CustomBuilds then
+                    TC_CustomBuilds = {}
                 end
-                return true
-            end
-
-            if TalentDataReady() then
-                addon:CreateFrames()
-            else
-                -- Try again when spells/talent data loads
-                eventFrame:RegisterEvent("SPELLS_CHANGED")
-            end
-        elseif event == "SPELLS_CHANGED" then
-            if not addon.isInitialized then
-                local tabs = GetNumTalentTabs() or 0
-                if tabs > 0 then
-                    local ready = true
+                if TC_CustomBuilds[playerClass] then
+                    addon.pickOrder = TC_CustomBuilds[playerClass]
+                else
+                    addon.pickOrder = {}
+                end
+                -- do NOT create frames here; wait until PLAYER_LOGIN when all core data is ready
+                self:UnregisterEvent("ADDON_LOADED")
+            elseif event == "PLAYER_LOGIN" then
+                -- Defer frame creation until talent data is ready (some cores are late)
+                local function TalentDataReady()
+                    local tabs = GetNumTalentTabs() or 0
+                    if tabs < 1 then return false end
                     for t = 1, tabs do
-                        if (GetNumTalents(t) or 0) == 0 then
-                            ready = false
-                            break
+                        local n = GetNumTalents(t)
+                        if not n or n == 0 then
+                            return false
                         end
                     end
-                    if ready then
-                        addon:CreateFrames()
-                        this:UnregisterEvent("SPELLS_CHANGED")
+                    return true
+                end
+
+                if TalentDataReady() then
+                    addon:CreateFrames()
+                else
+                    -- Try again when spells/talent data loads
+                    eventFrame:RegisterEvent("SPELLS_CHANGED")
+                end
+            elseif event == "SPELLS_CHANGED" then
+                if not addon.isInitialized then
+                    local tabs = GetNumTalentTabs() or 0
+                    if tabs > 0 then
+                        local ready = true
+                        for t = 1, tabs do
+                            if (GetNumTalents(t) or 0) == 0 then
+                                ready = false
+                                break
+                            end
+                        end
+                        if ready then
+                            addon:CreateFrames()
+                            self:UnregisterEvent("SPELLS_CHANGED")
+                        end
                     end
                 end
-            end
 
-            -- Viewer now anchors to TalentFrame and inherits its visibility.
-        elseif event == "PLAYER_ENTERING_WORLD" then
-            if addon.isInitialized then
-                addon:UpdateGlow()
-            end
-        elseif event == "PLAYER_LEVEL_UP" then
-            if addon.isInitialized and mainFrame:IsShown() then
-                addon:UpdateGlow()
+                -- Viewer now anchors to TalentFrame and inherits its visibility.
+            elseif event == "PLAYER_ENTERING_WORLD" then
+                if addon.isInitialized then
+                    addon:UpdateGlow()
+                end
+            elseif event == "PLAYER_LEVEL_UP" then
+                if addon.isInitialized and mainFrame:IsShown() then
+                    addon:UpdateGlow()
+                end
             end
         end
-    end
-)
-eventFrame:RegisterEvent("ADDON_LOADED")
-eventFrame:RegisterEvent("PLAYER_LOGIN")
-eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-eventFrame:RegisterEvent("PLAYER_LEVEL_UP")
+    )
+    eventFrame:RegisterEvent("ADDON_LOADED")
+    eventFrame:RegisterEvent("PLAYER_LOGIN")
+    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    eventFrame:RegisterEvent("PLAYER_LEVEL_UP")
 
 -- ===== Slash ================================================================
 SLASH_TC1, SLASH_TC2 = "/tc", "/TC"
@@ -1373,61 +1522,46 @@ function SlashCmdList.TC(msg)
         end
     elseif cmd == "reset" then
         manualOverride = false
+        addon.pickOrder = {}
         addon:UpdateTalentDisplay()
         addon:UpdateGlow()
-        addon:Print("Guide reset to default.")
-    elseif talentGuides[string.upper(cmd)] ~= nil then
-        manualOverride = true
-        local sel = string.upper(cmd)
-        if talentGuides[sel] then
-            talentOrder = talentGuides[sel]
-            addon:UpdateTalentDisplay()
-            addon:UpdateGlow()
-            addon:Print("Now showing " .. sel)
-        else
-            addon:Print("No guide configured for " .. sel .. ". Opening calculator.")
-            addon:RefreshTalentIcons()
-            calculatorFrame:Show()
-            addon:UpdateCalculatorOverlays()
-            for tab = 1, 3 do
-                addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
-            end
+        addon:UpdateCalculatorOverlays()
+        for tab = 1, 3 do
+            addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
         end
+        addon:Print("Guide reset to default.")
+    elseif cmd == "info" then
+        addon:ToggleInfo()
     else
-        addon:Print("Usage: /tc [calc | reset]")
+        addon:Print("Usage: /tc [calc | reset | info]")
     end
 end
 -- Rotating background for calculator
 function addon:InitBackgroundRotator(frame)
-    local bases = {}
-    for t=1,3 do
-        local _, _, _, bg = GetTalentTabInfo(t)
-        if bg then
-            local base = bg
-            local slash = string.find(base, "[/\\][^/\\]*$")
-            if slash then base = string.sub(base, slash + 1) end
-            if base ~= "" then tinsert(bases, base) end
-        end
-    end
-    if table.getn(bases) == 0 then return end
+    if not ROTATING_BACKGROUNDS or table.getn(ROTATING_BACKGROUNDS) == 0 then return end
     frame._bgFrames = {}
-    for i, base in ipairs(bases) do
+    for i, art in ipairs(ROTATING_BACKGROUNDS) do
         local holder = CreateFrame("Frame", nil, frame)
         holder:SetAllPoints(frame)
         holder:SetFrameLevel(max(0, frame:GetFrameLevel() - 2))
-        BuildTalentBackground(holder, base)
+        local tex = holder:CreateTexture(nil, "BACKGROUND")
+        tex:SetAllPoints(holder)
+        tex:SetTexture(art.texture)
+        holder.tex = tex
         holder:SetAlpha(i == 1 and 1 or 0)
         frame._bgFrames[i] = holder
     end
     frame._bgIndex = 1
     frame._bgTimer = 0
-    frame:SetScript("OnUpdate", function()
-        frame._bgTimer = frame._bgTimer + arg1
+    frame:SetScript("OnUpdate", function(_, elapsed)
+        frame._bgTimer = frame._bgTimer + (elapsed or 0)
         local n = table.getn(frame._bgFrames)
         if n <= 1 then return end
-        local t = frame._bgTimer % (BG_ROTATE_PERIOD + BG_FADE_DURATION)
+        local period = BG_ROTATE_PERIOD + BG_FADE_DURATION
+        local t = frame._bgTimer - period * floor(frame._bgTimer / period)
         local active = frame._bgIndex
-        local nextIndex = active % n + 1
+        local nextIndex = active + 1
+        if nextIndex > n then nextIndex = 1 end
         if t < BG_ROTATE_PERIOD then
             frame._bgFrames[active]:SetAlpha(1)
             frame._bgFrames[nextIndex]:SetAlpha(0)
