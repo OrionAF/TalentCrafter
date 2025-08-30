@@ -67,31 +67,31 @@ local BG_FADE_DURATION = 2  -- seconds crossfade
 
 -- Rotating background artwork and credits
 local ROTATING_BACKGROUNDS = {
-    { title = "Kruul Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Kruul_Artwork-9NZvwXa5.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Grim Reaches Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Reaches_Illustration-CKnIkp8J.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Lava Boss Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lava_Boss_Illustration-DQ5NMiUr.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Ironforge Music Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\ironforge_music-v9UaA8rv.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Development Basement Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Development_Basement_Artwork-BiuxhgEt.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Game Master Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\GM_Artwork_2-CqBmxCUw.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Northwind Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art-G4megDko.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Northwind Artwork 2", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art_2-CQLL-0c5.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Priest T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\priest_t35-YgnbD4cD.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Rogue/Mage T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\rogue_mage-CU3g3NMm.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Shaman/Warrior T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Shaman_Warrior_T35-De9CB99x.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Paladin/Warlock T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\paladin_lock-CDrowJpy.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Grim Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Illustration-DkIvprkp.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Level One Lunatic", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lvl1_Lunatic_Illustration-Db_TSBev.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Sorrowguard Keep", texture = "Interface\\AddOns\\TalentCrafter\\Art\\sorrowguard_keep--0OJ7CDV.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Undead Hunter Tier 3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Undead_Hunter_Tier35-CkrDOGh2.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Turtle WoW Anniversary", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Turtle_Wow_Anniversary_Illustration-CRmrlq8g.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Rooting out the Evil", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Druid_Tier_Illustration_4k-DqXsG0qV.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Gnarlmoon", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Gnarlmoon2-Dh6Bzpg4.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Karazhan Anomalus", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Karazhan-Anomalus-Illustration-NQVAlUVc.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Stormwrought Ruins", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Balor_Illustration-DjIXovEQ.tga", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Beyond the Greymane Wall", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_giln-D3cVat7-.tga", artist = "Stonegut" },
-    { title = "Deep in the Green", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Deep_in_the_Green-BNW_slvT.tga", artist = "Mikkel Lund Molberg" },
-    { title = "Mysteries of Azeroth", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_adventurers-DaDn9dmG.tga", artist = "Misho Tenev" },
-    { title = "Crescent Grove", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_crescent_grove_no_logo-BaLvmZRm.tga", artist = "Ghor" }
+    { title = "Kruul Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Kruul_Artwork-9NZvwXa5", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Grim Reaches Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Reaches_Illustration-CKnIkp8J", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Lava Boss Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lava_Boss_Illustration-DQ5NMiUr", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Ironforge Music Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\ironforge_music-v9UaA8rv", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Development Basement Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Development_Basement_Artwork-BiuxhgEt", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Game Master Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\GM_Artwork_2-CqBmxCUw", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Northwind Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art-G4megDko", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Northwind Artwork 2", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art_2-CQLL-0c5", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Priest T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\priest_t35-YgnbD4cD", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Rogue/Mage T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\rogue_mage-CU3g3NMm", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Shaman/Warrior T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Shaman_Warrior_T35-De9CB99x", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Paladin/Warlock T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\paladin_lock-CDrowJpy", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Grim Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Illustration-DkIvprkp", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Level One Lunatic", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lvl1_Lunatic_Illustration-Db_TSBev", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Sorrowguard Keep", texture = "Interface\\AddOns\\TalentCrafter\\Art\\sorrowguard_keep--0OJ7CDV", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Undead Hunter Tier 3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Undead_Hunter_Tier35-CkrDOGh2", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Turtle WoW Anniversary", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Turtle_Wow_Anniversary_Illustration-CRmrlq8g", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Rooting out the Evil", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Druid_Tier_Illustration_4k-DqXsG0qV", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Gnarlmoon", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Gnarlmoon2-Dh6Bzpg4", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Karazhan Anomalus", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Karazhan-Anomalus-Illustration-NQVAlUVc", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Stormwrought Ruins", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Balor_Illustration-DjIXovEQ", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Beyond the Greymane Wall", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_giln-D3cVat7-", artist = "Stonegut" },
+    { title = "Deep in the Green", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Deep_in_the_Green-BNW_slvT", artist = "Mikkel Lund Molberg" },
+    { title = "Mysteries of Azeroth", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_adventurers-DaDn9dmG", artist = "Misho Tenev" },
+    { title = "Crescent Grove", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_crescent_grove_no_logo-BaLvmZRm", artist = "Ghor" }
 }
 
 -- ===== Helpers ==============================================================
@@ -99,9 +99,9 @@ local ROTATING_BACKGROUNDS = {
 -- Settings defaults
 local function EnsureSettings()
     if not TC_Settings then
-        TC_Settings = { bgRotate = true, bgPreserve = false, bgAspect = 2.0 }
+        TC_Settings = { bgRotate = false, bgPreserve = false, bgAspect = 2.0 }
     else
-        if TC_Settings.bgRotate == nil then TC_Settings.bgRotate = true end
+        if TC_Settings.bgRotate == nil then TC_Settings.bgRotate = false end
         if TC_Settings.bgPreserve == nil then TC_Settings.bgPreserve = false end
         if not TC_Settings.bgAspect then TC_Settings.bgAspect = 2.0 end
     end
@@ -1200,8 +1200,11 @@ function addon:CreateFrames()
     end
     calculatorFrame:Hide()
     if UISpecialFrames then tinsert(UISpecialFrames, "TC_TalentCalculator") end
-    -- Rotating global background
-    addon:InitBackgroundRotator(calculatorFrame)
+    -- Rotating global background (lazy-init; can be toggled via /tc bg on)
+    EnsureSettings()
+    if TC_Settings.bgRotate then
+        addon:InitBackgroundRotator(calculatorFrame)
+    end
     calculatorFrame:SetMovable(true)
     calculatorFrame:EnableMouse(true)
     calculatorFrame:RegisterForDrag("LeftButton")
@@ -1577,6 +1580,54 @@ function addon:TryInitializeNow()
 end
 
 function SlashCmdList.TC(msg)
+    -- quick background debug helper: /tc bgtest <path> or /tc bgclear
+    if msg and string.find(msg, "^%s*bgtest") then
+        local path = string.gsub(msg, "^%s*bgtest%s*", "")
+        if path == nil or path == "" then
+            addon:Print("Usage: /tc bgtest <texture path>")
+            addon:Print("Example: /tc bgtest Interface\\AddOns\\TalentCrafter\\Art\\Kruul_Artwork-9NZvwXa5.tga")
+            return
+        end
+        if not addon._dbgBG then
+            local f = CreateFrame("Frame", "TC_DebugBG", UIParent)
+            f:SetAllPoints(UIParent)
+            f:EnableMouse(false)
+            local tex = f:CreateTexture(nil, "BACKGROUND")
+            tex:SetAllPoints(f)
+            f.tex = tex
+            addon._dbgBG = f
+        end
+        local f = addon._dbgBG
+        f:Show()
+        local function try(p)
+            f.tex:SetTexture(p)
+            local got = f.tex:GetTexture()
+            addon:Print("bgtest try: " .. (p or "(nil)") .. " => " .. (got or "nil"))
+            return got ~= nil
+        end
+        local base = path
+        base = string.gsub(base, "%.tga$", "")
+        base = string.gsub(base, "%.TGA$", "")
+        base = string.gsub(base, "%.blp$", "")
+        base = string.gsub(base, "%.BLP$", "")
+        local ok = try(base)
+            or try(base .. ".tga")
+            or try(base .. ".TGA")
+            or try(base .. ".blp")
+            or try(base .. ".BLP")
+            or try(path)
+        if ok then
+            addon:Print("bgtest OK: " .. (f.tex:GetTexture() or path))
+        else
+            addon:Print("bgtest failed to load texture: " .. (path or "(nil)"))
+        end
+        return
+    elseif msg and string.find(msg, "^%s*bgclear") then
+        if addon._dbgBG then addon._dbgBG:Hide() end
+        addon:Print("bgtest overlay hidden")
+        return
+    end
+
     if not addon.isInitialized then
         if not addon:TryInitializeNow() then
             addon:Print("Talent data not ready yet; try again in a moment.")
@@ -1611,12 +1662,28 @@ function SlashCmdList.TC(msg)
         addon:Print("Guide reset to default.")
     elseif cmd == "info" then
         addon:ToggleInfo()
+    elseif string.find(cmd, "^bg%s+on") then
+        EnsureSettings()
+        TC_Settings.bgRotate = true
+        if calculatorFrame and not calculatorFrame._bgFrames then
+            addon:InitBackgroundRotator(calculatorFrame)
+        end
+        if calculatorFrame and calculatorFrame._bgFrames then
+            for _, h in ipairs(calculatorFrame._bgFrames) do h:Show() end
+        end
+        addon:Print("Background rotator: ON")
+    elseif string.find(cmd, "^bg%s+off") then
+        EnsureSettings()
+        TC_Settings.bgRotate = false
+        addon:DisableBackgroundRotator(calculatorFrame)
+        addon:Print("Background rotator: OFF")
     else
-        addon:Print("Usage: /tc [calc | reset | info]")
+        addon:Print("Usage: /tc [calc | reset | info | bg on | bg off | bgtest <path> | bgclear]")
     end
 end
 -- Rotating background for calculator
 function addon:InitBackgroundRotator(frame)
+    if frame._bgFrames then return end
     if not ROTATING_BACKGROUNDS or table.getn(ROTATING_BACKGROUNDS) == 0 then return end
     local frames = {}
 
@@ -1637,15 +1704,22 @@ function addon:InitBackgroundRotator(frame)
         local tex = holder:CreateTexture(nil, "ARTWORK")
         tex:SetAllPoints(holder)
 
-        -- Prefer provided texture; if it fails, attempt common alternate ext
-        local ok = trySetTexture(tex, art.texture)
-        if not ok and type(art.texture) == "string" then
+        -- Try extensionless first (client may resolve), then prefer TGA, then BLP, then original path.
+        local ok = false
+        if type(art.texture) == "string" then
             local base = art.texture
             base = string.gsub(base, "%.tga$", "")
-            -- Prefer BLP first on Vanilla
-            ok = trySetTexture(tex, base .. ".blp")
-                or trySetTexture(tex, base .. ".tga")
-                or trySetTexture(tex, base .. ".TGA")
+            base = string.gsub(base, "%.TGA$", "")
+            base = string.gsub(base, "%.blp$", "")
+            base = string.gsub(base, "%.BLP$", "")
+            ok = trySetTexture(tex, base)
+              or trySetTexture(tex, base .. ".tga")
+              or trySetTexture(tex, base .. ".TGA")
+              or trySetTexture(tex, base .. ".blp")
+              or trySetTexture(tex, base .. ".BLP")
+        end
+        if not ok then
+            ok = trySetTexture(tex, art.texture)
         end
 
         holder.tex = tex
@@ -1686,4 +1760,12 @@ function addon:InitBackgroundRotator(frame)
             end
         end
     end)
+end
+
+function addon:DisableBackgroundRotator(frame)
+    frame = frame or calculatorFrame
+    if not frame or not frame._bgFrames then return end
+    frame:SetScript("OnUpdate", nil)
+    for _, h in ipairs(frame._bgFrames) do h:Hide() end
+    frame._bgFrames = nil
 end
