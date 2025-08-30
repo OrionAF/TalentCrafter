@@ -16,14 +16,8 @@ Designed for **Turtle WoW** on the **1.12.1** client. It may also work on other 
 All commands start with `/tc` :
 
 - `/tc calc` — Open the calculator window.
-
-- `/tc settings` — Open the settings panel.
-
-- `/tc reset` — Reset to default state (no active guide).
-
-- `/tc lock` — Lock the main talent list viewer.
-
-- `/tc unlock` — Unlock the main talent list viewer for dragging.
+- `/tc reset` — Reset the viewer and clear any planned talents.
+- `/tc info` — Show addon information and artwork credits.
 
 
 # Using the calculator
@@ -34,7 +28,6 @@ All commands start with `/tc` :
 
 - **Export/Import:** Copy a compact code to share builds or reload them later.
 
-- **Show only with Talent panel:** Enable in Settings if you prefer the viewer list to appear only when the default Talent Frame is open.
 
 # FAQ
 

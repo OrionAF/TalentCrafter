@@ -65,13 +65,42 @@ local USE_TREE_BACKGROUNDS = false -- single rotating background instead
 local BG_ROTATE_PERIOD = 12 -- seconds fully visible
 local BG_FADE_DURATION = 2  -- seconds crossfade
 
+-- Rotating background artwork and credits
+local ROTATING_BACKGROUNDS = {
+    { title = "Kruul Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Kruul_Artwork-9NZvwXa5.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Grim Reaches Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Reaches_Illustration-CKnIkp8J.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Lava Boss Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lava_Boss_Illustration-DQ5NMiUr.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Ironforge Music Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\ironforge_music-v9UaA8rv.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Development Basement Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Development_Basement_Artwork-BiuxhgEt.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Game Master Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\GM_Artwork_2-CqBmxCUw.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Northwind Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art-G4megDko.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Northwind Artwork 2", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art_2-CQLL-0c5.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Priest T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\priest_t35-YgnbD4cD.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Rogue/Mage T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\rogue_mage-CU3g3NMm.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Shaman/Warrior T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Shaman_Warrior_T35-De9CB99x.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Paladin/Warlock T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\paladin_lock-CDrowJpy.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Grim Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Illustration-DkIvprkp.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Level One Lunatic", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lvl1_Lunatic_Illustration-Db_TSBev.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Sorrowguard Keep", texture = "Interface\\AddOns\\TalentCrafter\\Art\\sorrowguard_keep--0OJ7CDV.jpeg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Undead Hunter Tier 3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Undead_Hunter_Tier35-CkrDOGh2.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Turtle WoW Anniversary", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Turtle_Wow_Anniversary_Illustration-CRmrlq8g.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Rooting out the Evil", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Druid_Tier_Illustration_4k-DqXsG0qV.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Gnarlmoon", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Gnarlmoon2-Dh6Bzpg4.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Karazhan Anomalus", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Karazhan-Anomalus-Illustration-NQVAlUVc.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Stormwrought Ruins", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Balor_Illustration-DjIXovEQ.jpg", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
+    { title = "Beyond the Greymane Wall", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_giln-D3cVat7-.png", artist = "Stonegut" },
+    { title = "Deep in the Green", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Deep_in_the_Green-BNW_slvT.png", artist = "Mikkel Lund Molberg" },
+    { title = "Mysteries of Azeroth", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_adventurers-DaDn9dmG.png", artist = "Misho Tenev" },
+    { title = "Crescent Grove", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_crescent_grove_no_logo-BaLvmZRm.png", artist = "Ghor" }
+}
+
 -- ===== Helpers ==============================================================
 
 function addon:Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cFFDAA520[TC]|r " .. (msg or ""), 1, 1, 1)
 end
 
--- settings/info UI removed
+-- settings UI removed
 
 local function SplitString(s, sep)
     sep = sep or "%s"
@@ -132,12 +161,82 @@ local function ApplyGoldBorder(frame)
     frame:SetBackdropBorderColor(1.0, 0.84, 0.0, 0.9)
 end
 
+-- Info window showing background credits
+local function BuildInfoFrame()
+    if addon.infoFrame then return end
+    local f = CreateFrame("Frame", "TC_InfoFrame", UIParent)
+    f:SetWidth(420)
+    f:SetHeight(480)
+    f:SetPoint("CENTER")
+    ApplyDialogBackdrop(f)
+    f:EnableMouse(true)
+    f:SetMovable(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", f.StopMovingOrSizing)
+
+    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+    close:SetPoint("TOPRIGHT", f, "TOPRIGHT")
+
+    local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOP", 0, -10)
+    title:SetText("TalentCrafter Info")
+
+    local scroll = CreateFrame("ScrollFrame", nil, f, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT", 16, -40)
+    scroll:SetPoint("BOTTOMRIGHT", -32, 16)
+    local content = CreateFrame("Frame", nil, scroll)
+    content:SetWidth(360)
+    scroll:SetScrollChild(content)
+
+    local y = 0
+    local intro = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    intro:SetPoint("TOPLEFT", 0, y)
+    intro:SetWidth(360)
+    intro:SetJustifyH("LEFT")
+    intro:SetText("Background artwork credits:")
+    y = y - 18
+
+    for _, art in ipairs(ROTATING_BACKGROUNDS) do
+        local line = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        line:SetPoint("TOPLEFT", 0, y)
+        line:SetWidth(360)
+        line:SetJustifyH("LEFT")
+        local txt = art.title .. " — " .. art.artist
+        if art.website then
+            txt = txt .. " (" .. art.website .. ")"
+        end
+        line:SetText(txt)
+        y = y - 14
+    end
+    content:SetHeight(-y + 20)
+    addon.infoFrame = f
+end
+
+function addon:ToggleInfo()
+    if not addon.infoFrame then BuildInfoFrame() end
+    if addon.infoFrame:IsShown() then
+        addon.infoFrame:Hide()
+    else
+        addon.infoFrame:Show()
+    end
+end
+
 -- Stitch 4 tiles to fill exactly the 'frame' rect
 local BG_OVERSCAN = 1.15
 local function BuildTalentBackground(frame, basename)
+    -- Wait for valid size before drawing
+    local W, H = frame:GetWidth(), frame:GetHeight()
+    if not W or not H or W <= 0 or H <= 0 then
+        frame:SetScript("OnSizeChanged", function(self)
+            self:SetScript("OnSizeChanged", nil)
+            BuildTalentBackground(self, basename)
+        end)
+        return
+    end
+
     -- Crop via ScrollFrame so oversized tiles never bleed outside the tree
     local atlasW, atlasH = 320, 384
-    local W, H = frame:GetWidth() or atlasW, frame:GetHeight() or atlasH
     local s = max(W / atlasW, H / atlasH) * BG_OVERSCAN
 
     local clip = CreateFrame("ScrollFrame", nil, frame)
@@ -279,6 +378,32 @@ local function EnsureTurtleTalentData()
     end
     addon._descCache = cache
     return true
+end
+
+-- Display talent tooltip with Turtle per-rank data
+function addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
+    if not ownerBtn or not GameTooltip then return end
+    GameTooltip:SetOwner(ownerBtn, "ANCHOR_RIGHT")
+    if GameTooltip.SetTalent then
+        GameTooltip:SetTalent(tabIndex, talentIndex)
+    end
+
+    local name, _, _, _, currRank, maxRank = GetTalentInfo(tabIndex, talentIndex)
+    if currRank and maxRank and currRank < maxRank and EnsureTurtleTalentData() then
+        local descTable = addon._descCache and addon._descCache[playerClass]
+        if descTable and descTable[tabIndex] then
+            local list = descTable[tabIndex][name]
+            if type(list) == "table" then
+                local nextText = list[currRank + 1]
+                if type(nextText) == "string" and nextText ~= "" then
+                    GameTooltip:AddLine(" ")
+                    GameTooltip:AddLine("Next rank:", 1, 0.82, 0)
+                    GameTooltip:AddLine(nextText, 1, 1, 1, true)
+                end
+            end
+        end
+    end
+    GameTooltip:Show()
 end
 
 -- Rebuild pickOrder by applying each pick in sequence and dropping any that
@@ -945,7 +1070,7 @@ function addon:CreateFrames()
         addon.talentLines[i] = line
     end
 
-    -- settings/info removed
+    -- settings panel removed
 
     -- Robust tier detection: fallback to 11 tiers if early snapshot is low.
     local function DetectMaxTier()
@@ -1373,49 +1498,32 @@ function SlashCmdList.TC(msg)
         end
     elseif cmd == "reset" then
         manualOverride = false
+        addon.pickOrder = {}
         addon:UpdateTalentDisplay()
         addon:UpdateGlow()
-        addon:Print("Guide reset to default.")
-    elseif talentGuides[string.upper(cmd)] ~= nil then
-        manualOverride = true
-        local sel = string.upper(cmd)
-        if talentGuides[sel] then
-            talentOrder = talentGuides[sel]
-            addon:UpdateTalentDisplay()
-            addon:UpdateGlow()
-            addon:Print("Now showing " .. sel)
-        else
-            addon:Print("No guide configured for " .. sel .. ". Opening calculator.")
-            addon:RefreshTalentIcons()
-            calculatorFrame:Show()
-            addon:UpdateCalculatorOverlays()
-            for tab = 1, 3 do
-                addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
-            end
+        addon:UpdateCalculatorOverlays()
+        for tab = 1, 3 do
+            addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
         end
+        addon:Print("Guide reset to default.")
+    elseif cmd == "info" then
+        addon:ToggleInfo()
     else
-        addon:Print("Usage: /tc [calc | reset]")
+        addon:Print("Usage: /tc [calc | reset | info]")
     end
 end
 -- Rotating background for calculator
 function addon:InitBackgroundRotator(frame)
-    local bases = {}
-    for t=1,3 do
-        local _, _, _, bg = GetTalentTabInfo(t)
-        if bg then
-            local base = bg
-            local slash = string.find(base, "[/\\][^/\\]*$")
-            if slash then base = string.sub(base, slash + 1) end
-            if base ~= "" then tinsert(bases, base) end
-        end
-    end
-    if table.getn(bases) == 0 then return end
+    if not ROTATING_BACKGROUNDS or table.getn(ROTATING_BACKGROUNDS) == 0 then return end
     frame._bgFrames = {}
-    for i, base in ipairs(bases) do
+    for i, art in ipairs(ROTATING_BACKGROUNDS) do
         local holder = CreateFrame("Frame", nil, frame)
         holder:SetAllPoints(frame)
         holder:SetFrameLevel(max(0, frame:GetFrameLevel() - 2))
-        BuildTalentBackground(holder, base)
+        local tex = holder:CreateTexture(nil, "BACKGROUND")
+        tex:SetAllPoints(holder)
+        tex:SetTexture(art.texture)
+        holder.tex = tex
         holder:SetAlpha(i == 1 and 1 or 0)
         frame._bgFrames[i] = holder
     end
