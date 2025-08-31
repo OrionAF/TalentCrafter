@@ -172,6 +172,30 @@ local function ApplyGoldBorder(frame)
     frame:SetBackdropBorderColor(1.0, 0.84, 0.0, 0.9)
 end
 
+-- Adjust tree backdrops to better reveal rotating background art
+function addon:RefreshTreeBackdrops()
+    local alpha = 0.25
+    if TC_Settings and TC_Settings.bgRotate then
+        alpha = 0.10
+    end
+    for tab = 1, 3 do
+        local tree = getglobal("TC_CalcTree" .. tab)
+        if tree and tree.SetBackdropColor then
+            tree:SetBackdropColor(0, 0, 0, alpha)
+        end
+    end
+end
+
+-- Adjust calculator backdrop fill to keep border visible while showing art
+function addon:RefreshCalcBackdrop()
+    if not calculatorFrame or not calculatorFrame.SetBackdropColor then return end
+    if TC_Settings and TC_Settings.bgRotate then
+        calculatorFrame:SetBackdropColor(0, 0, 0, 0.00)
+    else
+        calculatorFrame:SetBackdropColor(0, 0, 0, 0.35)
+    end
+end
+
 -- Info window showing background credits
 local function BuildInfoFrame()
     if addon.infoFrame then return end
@@ -410,7 +434,8 @@ function addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
     if ownerBtn and ownerBtn.rankText and ownerBtn.rankText.GetText then
         local rt = ownerBtn.rankText:GetText()
         if type(rt) == "string" then
-            local a, b = string.match(rt, "^(%d+)%s*/%s*(%d+)$")
+            -- Lua 5.0: use string.find captures instead of string.match
+            local _, _, a, b = string.find(rt, "^(%d+)%s*/%s*(%d+)$")
             if a then plannedFromText = tonumber(a) end
             if b then maxFromText = tonumber(b) end
         end
@@ -1193,11 +1218,9 @@ function addon:CreateFrames()
     calculatorFrame:SetWidth(3 * (TREE_W + 20) + 40)
     calculatorFrame:SetHeight(TREE_H + 100)
     calculatorFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    -- Use a lighter backdrop so rotating background art is visible
+    -- Use a dialog backdrop; adjust fill alpha based on background setting
     ApplyDialogBackdrop(calculatorFrame)
-    if calculatorFrame.SetBackdropColor then
-        calculatorFrame:SetBackdropColor(0, 0, 0, 0.35)
-    end
+    addon:RefreshCalcBackdrop()
     calculatorFrame:Hide()
     if UISpecialFrames then tinsert(UISpecialFrames, "TC_TalentCalculator") end
     -- Rotating global background (lazy-init; can be toggled via /tc bg on)
@@ -1248,7 +1271,13 @@ function addon:CreateFrames()
         tree:SetWidth(TREE_W)
         tree:SetHeight(TREE_H)
         tree:SetPoint("TOPLEFT", calculatorFrame, "TOPLEFT", (tab - 1) * (TREE_W + 20) + 20, -40)
+        -- Ensure trees render above any rotating background holders
+        tree:SetFrameLevel((calculatorFrame:GetFrameLevel() or 0) + 2)
         ApplyGoldBorder(tree)
+        -- When global rotator is active, reduce the fill alpha so art shows through
+        if TC_Settings and TC_Settings.bgRotate and tree.SetBackdropColor then
+            tree:SetBackdropColor(0, 0, 0, 0.10)
+        end
 
         local gridHeight = (maxTier - 1) * GRID_SPACING + ICON_SIZE
         local bgFrame = CreateFrame("Frame", nil, tree)
@@ -1580,53 +1609,6 @@ function addon:TryInitializeNow()
 end
 
 function SlashCmdList.TC(msg)
-    -- quick background debug helper: /tc bgtest <path> or /tc bgclear
-    if msg and string.find(msg, "^%s*bgtest") then
-        local path = string.gsub(msg, "^%s*bgtest%s*", "")
-        if path == nil or path == "" then
-            addon:Print("Usage: /tc bgtest <texture path>")
-            addon:Print("Example: /tc bgtest Interface\\AddOns\\TalentCrafter\\Art\\Kruul_Artwork-9NZvwXa5.tga")
-            return
-        end
-        if not addon._dbgBG then
-            local f = CreateFrame("Frame", "TC_DebugBG", UIParent)
-            f:SetAllPoints(UIParent)
-            f:EnableMouse(false)
-            local tex = f:CreateTexture(nil, "BACKGROUND")
-            tex:SetAllPoints(f)
-            f.tex = tex
-            addon._dbgBG = f
-        end
-        local f = addon._dbgBG
-        f:Show()
-        local function try(p)
-            f.tex:SetTexture(p)
-            local got = f.tex:GetTexture()
-            addon:Print("bgtest try: " .. (p or "(nil)") .. " => " .. (got or "nil"))
-            return got ~= nil
-        end
-        local base = path
-        base = string.gsub(base, "%.tga$", "")
-        base = string.gsub(base, "%.TGA$", "")
-        base = string.gsub(base, "%.blp$", "")
-        base = string.gsub(base, "%.BLP$", "")
-        local ok = try(base)
-            or try(base .. ".tga")
-            or try(base .. ".TGA")
-            or try(base .. ".blp")
-            or try(base .. ".BLP")
-            or try(path)
-        if ok then
-            addon:Print("bgtest OK: " .. (f.tex:GetTexture() or path))
-        else
-            addon:Print("bgtest failed to load texture: " .. (path or "(nil)"))
-        end
-        return
-    elseif msg and string.find(msg, "^%s*bgclear") then
-        if addon._dbgBG then addon._dbgBG:Hide() end
-        addon:Print("bgtest overlay hidden")
-        return
-    end
 
     if not addon.isInitialized then
         if not addon:TryInitializeNow() then
@@ -1671,14 +1653,18 @@ function SlashCmdList.TC(msg)
         if calculatorFrame and calculatorFrame._bgFrames then
             for _, h in ipairs(calculatorFrame._bgFrames) do h:Show() end
         end
+        addon:RefreshTreeBackdrops()
+        addon:RefreshCalcBackdrop()
         addon:Print("Background rotator: ON")
     elseif string.find(cmd, "^bg%s+off") then
         EnsureSettings()
         TC_Settings.bgRotate = false
         addon:DisableBackgroundRotator(calculatorFrame)
+        addon:RefreshTreeBackdrops()
+        addon:RefreshCalcBackdrop()
         addon:Print("Background rotator: OFF")
     else
-        addon:Print("Usage: /tc [calc | reset | info | bg on | bg off | bgtest <path> | bgclear]")
+        addon:Print("Usage: /tc [calc | reset | info | bg on | bg off]")
     end
 end
 -- Rotating background for calculator
@@ -1686,6 +1672,8 @@ function addon:InitBackgroundRotator(frame)
     if frame._bgFrames then return end
     if not ROTATING_BACKGROUNDS or table.getn(ROTATING_BACKGROUNDS) == 0 then return end
     local frames = {}
+    -- Match the dialog backdrop insets so the art does not cover the rounded edge
+    local inset = 4
 
     local function trySetTexture(tex, path)
         if not path or path == "" then return false end
@@ -1695,13 +1683,16 @@ function addon:InitBackgroundRotator(frame)
 
     for i, art in ipairs(ROTATING_BACKGROUNDS) do
         local holder = CreateFrame("Frame", nil, frame)
-        holder:SetAllPoints(frame)
+        holder:ClearAllPoints()
+        holder:SetPoint("TOPLEFT", frame, "TOPLEFT", inset, -inset)
+        holder:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset, inset)
         holder:EnableMouse(false)
         -- Ensure we render above calculator backdrop but beneath tree widgets
         holder:SetFrameStrata(frame:GetFrameStrata())
+        -- Keep below tree frames (which are set to parent level + 2)
         holder:SetFrameLevel((frame:GetFrameLevel() or 0) + 1)
 
-        local tex = holder:CreateTexture(nil, "ARTWORK")
+        local tex = holder:CreateTexture(nil, "BACKGROUND")
         tex:SetAllPoints(holder)
 
         -- Try extensionless first (client may resolve), then prefer TGA, then BLP, then original path.
