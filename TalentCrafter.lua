@@ -116,7 +116,16 @@ end
 local function SplitString(s, sep)
     sep = sep or "%s"
     local t = {}
-    for str in string.gfind(s or "", "([^" .. sep .. "]+)") do
+    if not s or s == "" then return t end
+    -- Only single-char separators are expected (":", "-", ",").
+    -- Escape magic characters when building the class for Lua 5.0 patterns.
+    if sep ~= "%s" and string.len(sep) == 1 then
+        local ch = sep
+        if ch == "-" or ch == "]" or ch == "^" or ch == "%" then
+            sep = "%" .. ch
+        end
+    end
+    for str in string.gfind(s, "([^" .. sep .. "]+)") do
         tinsert(t, str)
     end
     return t
@@ -353,7 +362,7 @@ function addon:UpdateGlow()
 end
 
 function addon:Show()
-    if not addon.isInitialized or UnitLevel("player") < 10 then
+    if not addon.isInitialized then
         return
     end
     addon:UpdateTalentDisplay()
@@ -566,6 +575,7 @@ function addon:UpdateCalculatorOverlays()
             end
         end
     end
+    local totalSpent = (tabTotals[1] + tabTotals[2] + tabTotals[3])
     for tab, t in pairs(addon.calcTalents) do
         for idx, btn in pairs(t) do
             local id = tab .. "-" .. idx
@@ -585,7 +595,6 @@ function addon:UpdateCalculatorOverlays()
                 local have = counts[tab .. "-" .. preIndex] or 0
                 prereqOK = preMaxRank and have >= preMaxRank
             end
-            local totalSpent = (tabTotals[1] + tabTotals[2] + tabTotals[3])
             local capOK = totalSpent < 51
             local canPick = (r < (maxRank or 0)) and (spent >= requiredPoints) and prereqOK and capOK
             if btn.rankText then
@@ -666,6 +675,7 @@ function addon:OnTalentClick(tabIndex, talentIndex, ownerBtn)
 
     local id = tabIndex .. "-" .. talentIndex
     local _, _, _, _, _, maxRank = GetTalentInfo(tabIndex, talentIndex)
+    maxRank = maxRank or 0
     local have = 0
     for _, v in ipairs(self.pickOrder) do
         if v == id then
@@ -706,8 +716,8 @@ function addon:OnTalentRightClick(tabIndex, talentIndex, ownerBtn)
             if ownerBtn then
                 local counts = currentRankCounts()
                 ownerBtn._planned = counts[id] or 0
-                local _, _, _, _, _, maxRank = GetTalentInfo(tabIndex, talentIndex)
-                ownerBtn._maxRank = maxRank or 0
+                local _, _, _, _, _, maxRank2 = GetTalentInfo(tabIndex, talentIndex)
+                ownerBtn._maxRank = maxRank2 or 0
             end
             self:UpdateCalculatorOverlays()
             for t = 1, 3 do
@@ -718,6 +728,42 @@ function addon:OnTalentRightClick(tabIndex, talentIndex, ownerBtn)
             end
             return
         end
+    end
+end
+
+-- QoL helpers
+function addon:FillTalentToMax(tabIndex, talentIndex, ownerBtn)
+    local id = tabIndex .. "-" .. talentIndex
+    local _, _, _, _, _, maxRank = GetTalentInfo(tabIndex, talentIndex)
+    maxRank = maxRank or 0
+    local prevCount = -1
+    for _i = 1, maxRank do
+        local counts = currentRankCounts()
+        local have = counts[id] or 0
+        if have == prevCount then break end
+        prevCount = have
+        if have >= maxRank then break end
+        local before = table.getn(self.pickOrder)
+        self:OnTalentClick(tabIndex, talentIndex, ownerBtn)
+        if table.getn(self.pickOrder) == before then
+            break -- hit a gate or cap; stop trying
+        end
+    end
+end
+
+function addon:ClearTalentAllRanks(tabIndex, talentIndex, ownerBtn)
+    local id = tabIndex .. "-" .. talentIndex
+    local changed = false
+    while true do
+        local before = table.getn(self.pickOrder)
+        self:OnTalentRightClick(tabIndex, talentIndex, ownerBtn)
+        if table.getn(self.pickOrder) == before then
+            break
+        end
+        changed = true
+    end
+    if changed and ownerBtn and GameTooltip then
+        addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
     end
 end
 
@@ -800,6 +846,10 @@ local function GetBranchTex(tree)
             t:SetTexture("Interface\\TalentFrame\\UI-TalentBranches")
             tree._branches[i] = t
         else
+            if not addon._poolWarnedBranches then
+                addon._poolWarnedBranches = true
+                addon:Print("Branch pool limit reached; some lines may not render.")
+            end
             return nil
         end
     end
@@ -816,6 +866,10 @@ local function GetArrowTex(tree)
             t:SetTexture("Interface\\TalentFrame\\UI-TalentArrows")
             tree._arrows[i] = t
         else
+            if not addon._poolWarnedArrows then
+                addon._poolWarnedArrows = true
+                addon:Print("Arrow pool limit reached; some arrows may not render.")
+            end
             return nil
         end
     end
@@ -1241,8 +1295,23 @@ function addon:CreateFrames()
         "OnDragStop",
         function()
             this:StopMovingOrSizing()
+            -- Persist calculator position
+            EnsureSettings()
+            if TC_Settings then
+                local p, rel, rp, x, y = this:GetPoint()
+                local relName = (rel and rel.GetName and rel:GetName()) or "UIParent"
+                TC_Settings.calcPos = { point = p, relativeTo = relName, relativePoint = rp, x = x, y = y }
+            end
         end
     )
+    -- Restore calculator position if saved
+    EnsureSettings()
+    if TC_Settings and TC_Settings.calcPos then
+        local pos = TC_Settings.calcPos
+        calculatorFrame:ClearAllPoints()
+        local rel = getglobal(pos.relativeTo or "UIParent") or UIParent
+        calculatorFrame:SetPoint(pos.point or "CENTER", rel, pos.relativePoint or "CENTER", pos.x or 0, pos.y or 0)
+    end
     local calcTitle = calculatorFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     calcTitle:SetPoint("TOP", calculatorFrame, "TOP", 0, -10)
     local _, classToken = UnitClass("player")
@@ -1369,7 +1438,13 @@ function addon:CreateFrames()
             end)
             btn:SetScript("OnClick", function()
                 local b = arg1
-                if b == "LeftButton" or b == "LeftButtonUp" then
+                if (b == "LeftButton" or b == "LeftButtonUp") and IsShiftKeyDown() then
+                    -- Fill to max ranks respecting gates and cap
+                    addon:FillTalentToMax(T, I, this)
+                elseif (b == "RightButton" or b == "RightButtonUp") and IsControlKeyDown() then
+                    -- Remove all planned ranks for this talent
+                    addon:ClearTalentAllRanks(T, I, this)
+                elseif b == "LeftButton" or b == "LeftButtonUp" then
                     addon:OnTalentClick(T, I, this)
                 elseif b == "RightButton" or b == "RightButtonUp" then
                     addon:OnTalentRightClick(T, I, this)
@@ -1379,6 +1454,8 @@ function addon:CreateFrames()
         end
         addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
     end
+    -- Ensure tree backdrops reflect current background setting on first build
+    addon:RefreshTreeBackdrops()
 
     -- export/import
     exportFrame = CreateFrame("Frame", "TC_ExportFrame", calculatorFrame)
@@ -1618,10 +1695,6 @@ function SlashCmdList.TC(msg)
     end
     local cmd = string.lower(msg or "")
     if cmd == "calc" then
-        if UnitLevel("player") < 10 then
-            addon:Print("You must be at least level 10 to use the talent calculator.")
-            return
-        end
         addon:RefreshTalentIcons()
         if calculatorFrame:IsShown() then
             calculatorFrame:Hide()
@@ -1631,6 +1704,21 @@ function SlashCmdList.TC(msg)
             for tab = 1, 3 do
                 addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
             end
+        end
+    elseif cmd == "export" then
+        if not addon.isInitialized then return end
+        if exportFrame and getglobal("TC_ExportBox") then
+            importFrame:Hide()
+            getglobal("TC_ExportBox"):SetText(addon:ExportToString())
+            getglobal("TC_ExportBox"):HighlightText()
+            exportFrame:Show()
+        end
+    elseif cmd == "import" then
+        if not addon.isInitialized then return end
+        if importFrame and getglobal("TC_ImportBox") then
+            exportFrame:Hide()
+            getglobal("TC_ImportBox"):SetText("")
+            importFrame:Show()
         end
     elseif cmd == "reset" then
         manualOverride = false
@@ -1664,7 +1752,7 @@ function SlashCmdList.TC(msg)
         addon:RefreshCalcBackdrop()
         addon:Print("Background rotator: OFF")
     else
-        addon:Print("Usage: /tc [calc | reset | info | bg on | bg off]")
+        addon:Print("Usage: /tc [calc | reset | info | export | import | bg on | bg off]")
     end
 end
 -- Rotating background for calculator
@@ -1724,11 +1812,25 @@ function addon:InitBackgroundRotator(frame)
 
     if table.getn(frames) == 0 then return end
     frame._bgFrames = frames
-    for i, h in ipairs(frame._bgFrames) do
-        h:SetAlpha(i == 1 and 1 or 0)
+    -- Initial alphas set after selecting start index
+    -- Choose starting index (preserve if configured)
+    local startIndex = 1
+    if TC_Settings and TC_Settings.bgPreserve and tonumber(TC_Settings.bgIndex) then
+        local n = table.getn(frame._bgFrames)
+        local idx = tonumber(TC_Settings.bgIndex) or 1
+        if idx < 1 then idx = 1 end
+        if idx > n then
+            local a = (idx - 1)
+            idx = (a - math.floor(a / n) * n) + 1
+        end
+        startIndex = idx
     end
-    frame._bgIndex = 1
+    frame._bgIndex = startIndex
     frame._bgTimer = 0
+    -- Set initial alphas based on chosen start
+    for i, h in ipairs(frame._bgFrames) do
+        h:SetAlpha(i == frame._bgIndex and 1 or 0)
+    end
     frame:SetScript("OnUpdate", function()
         frame._bgTimer = frame._bgTimer + arg1
         local n = table.getn(frame._bgFrames)
@@ -1748,6 +1850,15 @@ function addon:InitBackgroundRotator(frame)
             frame._bgFrames[nextIndex]:SetAlpha(f)
             if f >= 1 then
                 frame._bgIndex = nextIndex
+                if TC_Settings and TC_Settings.bgPreserve then
+                    TC_Settings.bgIndex = nextIndex
+                end
+            end
+        end
+        -- Ensure no other slides are visible due to any outside interference
+        for i = 1, n do
+            if i ~= frame._bgIndex and i ~= ((frame._bgIndex < n) and (frame._bgIndex + 1) or 1) then
+                frame._bgFrames[i]:SetAlpha(0)
             end
         end
     end)
