@@ -1609,15 +1609,13 @@ function addon:CreateFrames()
             btn:SetScript("OnClick", function()
                 local b = arg1
                 if (b == "LeftButton" or b == "LeftButtonUp") and IsShiftKeyDown() then
-                    -- Fill to max ranks respecting gates and cap
-                    addon:FillTalentToMax(T, I, this)
+                    addon:FillTalentToMax(T, I, btn)
                 elseif (b == "RightButton" or b == "RightButtonUp") and IsControlKeyDown() then
-                    -- Remove all planned ranks for this talent
-                    addon:ClearTalentAllRanks(T, I, this)
+                    addon:ClearTalentAllRanks(T, I, btn)
                 elseif b == "LeftButton" or b == "LeftButtonUp" then
-                    addon:OnTalentClick(T, I, this)
+                    addon:OnTalentClick(T, I, btn)
                 elseif b == "RightButton" or b == "RightButtonUp" then
-                    addon:OnTalentRightClick(T, I, this)
+                    addon:OnTalentRightClick(T, I, btn)
                 end
             end)
             addon.calcTalents[tab][idx] = btn
