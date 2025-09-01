@@ -5,4 +5,9 @@
 ## Version: 1.0.3
 ## SavedVariables: TC_CustomBuilds, TC_Settings
 
+# Embedded libraries (Ace3v and companions)
+lib/Ace3.toc
+lib/LibDataBroker-1.1.lua
+lib/LibDBIcon-1.0.lua
+
 TalentCrafter.lua

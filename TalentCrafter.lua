@@ -99,16 +99,25 @@ local ROTATING_BACKGROUNDS = {
 -- Settings defaults
 local function EnsureSettings()
     if not TC_Settings then
-        TC_Settings = { bgRotate = false, bgPreserve = false, bgAspect = 2.0 }
+        TC_Settings = { bgRotate = false, bgPreserve = false, bgAspect = 2.0, minimap = {}, bgDebug = false }
     else
         if TC_Settings.bgRotate == nil then TC_Settings.bgRotate = false end
         if TC_Settings.bgPreserve == nil then TC_Settings.bgPreserve = false end
         if not TC_Settings.bgAspect then TC_Settings.bgAspect = 2.0 end
+        if type(TC_Settings.minimap) ~= "table" then TC_Settings.minimap = {} end
+        if TC_Settings.bgDebug == nil then TC_Settings.bgDebug = false end
     end
 end
 
 function addon:Print(msg)
     DEFAULT_CHAT_FRAME:AddMessage("|cFFDAA520[TC]|r " .. (msg or ""), 1, 1, 1)
+end
+
+function addon:Debug(msg)
+    EnsureSettings()
+    if TC_Settings and TC_Settings.bgDebug then
+        DEFAULT_CHAT_FRAME:AddMessage("|cFFDAA520[TC-DBG]|r " .. (msg or ""), 0.7, 0.9, 1)
+    end
 end
 
 -- settings UI removed
@@ -143,11 +152,88 @@ local function SetTexDesaturated(tex, desaturate)
 end
 
 local function FindTalentByPosition(tabIndex, tier, column)
+    -- Prefer cached lookup if available
+    if addon.posIndex and addon.posIndex[tabIndex]
+        and addon.posIndex[tabIndex][tier]
+        and addon.posIndex[tabIndex][tier][column] then
+        return addon.posIndex[tabIndex][tier][column]
+    end
+    -- Fallback to linear scan
     for i = 1, GetNumTalents(tabIndex) do
         local _, _, t, c = GetTalentInfo(tabIndex, i)
         if t == tier and c == column then
             return i
         end
+    end
+end
+
+-- ===== Ace3v/Lib integration (optional, detected at runtime) ==============
+
+-- Embed AceHook and AceTimer into our addon table when available,
+-- and prepare LibDataBroker/LibDBIcon launcher support.
+do
+    local AceHook = LibStub and LibStub("AceHook-3.0", true)
+    local AceTimer = LibStub and LibStub("AceTimer-3.0", true)
+    if AceHook and AceHook.Embed then AceHook:Embed(addon) end
+    if AceTimer and AceTimer.Embed then AceTimer:Embed(addon) end
+
+    local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
+    local DBIcon = LibStub and LibStub("LibDBIcon-1.0", true)
+
+    -- Hook TalentFrame::OnShow using AceHook if available
+    function addon:InstallTalentFrameHook()
+        local TF = getglobal("TalentFrame")
+        if not TF then return end
+        if self.HookScript and not self._aceHookedTF then
+            self:HookScript(TF, "OnShow", function()
+                if not addon.isInitialized then
+                    addon:TryInitializeNow()
+                end
+            end)
+            self._aceHookedTF = true
+        else
+            -- Fallback: use the original wrapper hook
+            if addon.LegacyHookTalentFrameOnShow then
+                addon:LegacyHookTalentFrameOnShow()
+            end
+        end
+    end
+
+    -- Minimap/LDB launcher
+    function addon:InitLauncher()
+        if not LDB or not DBIcon then return end
+        if self._ldb then return end
+        EnsureSettings()
+        self._ldb = LDB:NewDataObject("TalentCrafter", {
+            type = "launcher",
+            label = "TalentCrafter",
+            icon = "Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up",
+            OnClick = function(_, button)
+                if button == "LeftButton" then
+                    -- Toggle calculator
+                    if not addon.isInitialized then
+                        addon:TryInitializeNow()
+                    end
+                    if calculatorFrame and calculatorFrame:IsShown() then
+                        calculatorFrame:Hide()
+                    else
+                        if calculatorFrame then
+                            calculatorFrame:Show()
+                            addon:UpdateCalculatorOverlays()
+                            for tab = 1, 3 do addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab)) end
+                        end
+                    end
+                else
+                    addon:ToggleInfo()
+                end
+            end,
+            OnTooltipShow = function(tt)
+                tt:AddLine("TalentCrafter")
+                tt:AddLine("Left-click: Toggle calculator", 0.8, 0.8, 0.8)
+                tt:AddLine("Right-click: Info", 0.8, 0.8, 0.8)
+            end
+        })
+        DBIcon:Register("TalentCrafter", self._ldb, TC_Settings.minimap)
     end
 end
 
@@ -1282,28 +1368,11 @@ function addon:CreateFrames()
     if TC_Settings.bgRotate then
         addon:InitBackgroundRotator(calculatorFrame)
     end
-    calculatorFrame:SetMovable(true)
+    calculatorFrame:SetMovable(false)
     calculatorFrame:EnableMouse(true)
-    calculatorFrame:RegisterForDrag("LeftButton")
-    calculatorFrame:SetScript(
-        "OnDragStart",
-        function()
-            this:StartMoving()
-        end
-    )
-    calculatorFrame:SetScript(
-        "OnDragStop",
-        function()
-            this:StopMovingOrSizing()
-            -- Persist calculator position
-            EnsureSettings()
-            if TC_Settings then
-                local p, rel, rp, x, y = this:GetPoint()
-                local relName = (rel and rel.GetName and rel:GetName()) or "UIParent"
-                TC_Settings.calcPos = { point = p, relativeTo = relName, relativePoint = rp, x = x, y = y }
-            end
-        end
-    )
+    -- Intentionally disable StartMoving/StopMoving on 1.12; we provide a safe Move mode instead.
+    calculatorFrame:SetScript("OnDragStart", nil)
+    calculatorFrame:SetScript("OnDragStop", nil)
     -- Restore calculator position if saved
     EnsureSettings()
     if TC_Settings and TC_Settings.calcPos then
@@ -1312,12 +1381,73 @@ function addon:CreateFrames()
         local rel = getglobal(pos.relativeTo or "UIParent") or UIParent
         calculatorFrame:SetPoint(pos.point or "CENTER", rel, pos.relativePoint or "CENTER", pos.x or 0, pos.y or 0)
     end
-    local calcTitle = calculatorFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    calcTitle:SetPoint("TOP", calculatorFrame, "TOP", 0, -10)
+    
+    -- Move mode overlay (manual drag without StartMoving/StopMoving)
+    local mover = CreateFrame("Frame", "TC_MoveOverlay", calculatorFrame)
+    mover:SetAllPoints(calculatorFrame)
+    mover:SetFrameStrata(calculatorFrame:GetFrameStrata())
+    mover:SetFrameLevel((calculatorFrame:GetFrameLevel() or 0) + 3)
+    mover:Hide()
+    mover:EnableMouse(true)
+    ApplyGoldBorder(mover)
+    mover:SetBackdropColor(0, 0, 0, 0.35)
+    local mvText = mover:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    mvText:SetPoint("TOP", mover, "TOP", 0, -8)
+    mvText:SetText("Move Mode – drag anywhere")
+    mover.text = mvText
+    
+    local dragging = false
+    local dx, dy = 0, 0
+    mover:SetScript("OnMouseDown", function()
+        local scale = UIParent:GetScale() or 1
+        local x, y = GetCursorPosition()
+        x, y = x / scale, y / scale
+        local left = calculatorFrame:GetLeft() or 0
+        local bottom = calculatorFrame:GetBottom() or 0
+        dx = x - left
+        dy = y - bottom
+        dragging = true
+    end)
+    mover:SetScript("OnMouseUp", function()
+        dragging = false
+        -- persist position once after release
+        EnsureSettings()
+        if TC_Settings then
+            local ok, p, rel, rp, x, y = pcall(calculatorFrame.GetPoint, calculatorFrame)
+            if ok then
+                local relName = "UIParent"
+                if rel and rel.GetName then
+                    local ok2, name = pcall(rel.GetName, rel)
+                    if ok2 and name then relName = name end
+                end
+                TC_Settings.calcPos = { point = p or "BOTTOMLEFT", relativeTo = relName, relativePoint = rp or "BOTTOMLEFT", x = x or 0, y = y or 0 }
+            end
+        end
+    end)
+    mover:SetScript("OnUpdate", function()
+        if not dragging then return end
+        local scale = UIParent:GetScale() or 1
+        local x, y = GetCursorPosition()
+        x, y = x / scale, y / scale
+        local newLeft = x - (dx or 0)
+        local newBottom = y - (dy or 0)
+        calculatorFrame:ClearAllPoints()
+        calculatorFrame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", newLeft, newBottom)
+    end)
+    addon._moveOverlay = mover
+    -- Put summary text on a tiny overlay frame above the rotator and trees
+    local calcOverlay = CreateFrame("Frame", nil, calculatorFrame)
+    calcOverlay:SetAllPoints(calculatorFrame)
+    calcOverlay:SetFrameStrata(calculatorFrame:GetFrameStrata())
+    calcOverlay:SetFrameLevel((calculatorFrame:GetFrameLevel() or 0) + 3)
+    calcOverlay:EnableMouse(false)
+    local calcTitle = calcOverlay:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    calcTitle:SetPoint("TOP", calcOverlay, "TOP", 0, -10)
     local _, classToken = UnitClass("player")
     local className = classToken or "UNKNOWN"
     calcTitle:SetText(className .. " 0/0/0  |  Points left: 51")
     calculatorFrame.summaryText = calcTitle
+    calculatorFrame.calcOverlay = calcOverlay
     local calcClose = CreateFrame("Button", nil, calculatorFrame)
     calcClose:SetWidth(16)
     calcClose:SetHeight(16)
@@ -1331,6 +1461,41 @@ function addon:CreateFrames()
             calculatorFrame:Hide()
         end
     )
+
+    -- Move button (top-left)
+    local moveBtn = CreateFrame("Button", "TC_MoveButton", calculatorFrame, "UIPanelButtonTemplate")
+    moveBtn:SetWidth(48)
+    moveBtn:SetHeight(20)
+    moveBtn:SetPoint("TOPLEFT", calculatorFrame, "TOPLEFT", 8, -6)
+    moveBtn:SetText("Move")
+    -- Ensure the button is above the move overlay so it remains clickable
+    moveBtn:SetFrameStrata(calculatorFrame:GetFrameStrata())
+    moveBtn:SetFrameLevel((mover:GetFrameLevel() or 0) + 1)
+    moveBtn:SetScript("OnClick", function()
+        if addon._moveMode then
+            -- Exit move mode
+            addon._moveMode = false
+            dragging = false
+            if addon._moveOverlay then addon._moveOverlay:Hide() end
+            moveBtn:SetText("Move")
+            -- Safely re-enable background rotator shortly after exiting move mode
+            EnsureSettings()
+            if TC_Settings.bgRotate and calculatorFrame and not calculatorFrame._bgFrames then
+                addon:After(0.10, function()
+                    -- Re-check guards inside delayed call
+                    if TC_Settings.bgRotate and calculatorFrame and not calculatorFrame._bgFrames then
+                        addon:InitBackgroundRotator(calculatorFrame)
+                    end
+                end)
+            end
+        else
+            -- Enter move mode: freeze rotator and show overlay for manual drag
+            addon._moveMode = true
+            addon:FreezeBackgroundRotator(calculatorFrame)
+            if addon._moveOverlay then addon._moveOverlay:Show() end
+            moveBtn:SetText("Done")
+        end
+    end)
 
     -- trees + backgrounds
     for tab = 1, 3 do
@@ -1406,9 +1571,14 @@ function addon:CreateFrames()
     -- buttons (talent icons)
     for tab = 1, GetNumTalentTabs() do
         addon.calcTalents[tab] = {}
+        addon.posIndex = addon.posIndex or {}
+        addon.posIndex[tab] = addon.posIndex[tab] or {}
         local parent = getglobal("TC_CalcTree" .. tab)
         for idx = 1, GetNumTalents(tab) do
             local _, icon, tier, col = GetTalentInfo(tab, idx)
+            -- build fast lookup: (tab,tier,col) -> talentIndex
+            addon.posIndex[tab][tier] = addon.posIndex[tab][tier] or {}
+            addon.posIndex[tab][tier][col] = idx
             local btn = CreateFrame("Button", nil, parent)
             btn:SetWidth(ICON_SIZE)
             btn:SetHeight(ICON_SIZE)
@@ -1586,7 +1756,7 @@ end
 -- ===== Events ===============================================================
 
 local eventFrame = CreateFrame("Frame")
-local function HookTalentFrameOnShow()
+function addon:LegacyHookTalentFrameOnShow()
     local TF = getglobal("TalentFrame")
     if TF and not TF._tcHooked then
         TF._tcHooked = true
@@ -1614,19 +1784,21 @@ eventFrame:SetScript(
                 else
                     addon.pickOrder = {}
                 end
+                if addon.InitLauncher then addon:InitLauncher() end
             elseif arg1 == "Blizzard_TalentUI" then
                 -- If Blizzard Talent UI just loaded, try to initialize now
                 if not addon.isInitialized then
                     addon:TryInitializeNow()
                 end
-                HookTalentFrameOnShow()
+                addon:InstallTalentFrameHook()
             end
         elseif event == "PLAYER_LOGIN" then
             -- Try to initialize immediately; fall back to SPELLS_CHANGED if not ready
             if not addon:TryInitializeNow() then
                 eventFrame:RegisterEvent("SPELLS_CHANGED")
             end
-            HookTalentFrameOnShow()
+            addon:InstallTalentFrameHook()
+            if addon.InitLauncher then addon:InitLauncher() end
         elseif event == "SPELLS_CHANGED" then
             if not addon.isInitialized then
                 local tabs = GetNumTalentTabs() or 0
@@ -1700,6 +1872,11 @@ function SlashCmdList.TC(msg)
             calculatorFrame:Hide()
         else
             calculatorFrame:Show()
+            -- Re-initialize rotator on open if desired but missing
+            EnsureSettings()
+            if TC_Settings.bgRotate and (not calculatorFrame._bgFrames) then
+                addon:InitBackgroundRotator(calculatorFrame)
+            end
             addon:UpdateCalculatorOverlays()
             for tab = 1, 3 do
                 addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
@@ -1732,6 +1909,34 @@ function SlashCmdList.TC(msg)
         addon:Print("Guide reset to default.")
     elseif cmd == "info" then
         addon:ToggleInfo()
+    elseif cmd == "z" or string.find(cmd, "^layers") or string.find(cmd, "^zorder") then
+        addon:DumpZOrder()
+    elseif string.find(cmd, "^bg%s+debug%s+on") then
+        EnsureSettings(); TC_Settings.bgDebug = true; addon:Print("BG debug: ON")
+    elseif string.find(cmd, "^bg%s+debug%s+off") then
+        EnsureSettings(); TC_Settings.bgDebug = false; addon:Print("BG debug: OFF")
+    elseif string.find(cmd, "^bg%s+status") then
+        local n = (calculatorFrame and calculatorFrame._bgFrames and table.getn(calculatorFrame._bgFrames)) or 0
+        local idx = 0
+        if calculatorFrame and calculatorFrame._bgFrames and n > 0 then
+            local cycle = (BG_ROTATE_PERIOD + BG_FADE_DURATION)
+            local now = GetTime()
+            local elapsed = now - (calculatorFrame._bgBase or now)
+            local k = math.floor(elapsed / cycle)
+            local start = calculatorFrame._bgStart or 1
+            idx = 1 + (((start - 1) + k) - math.floor(((start - 1) + k) / n) * n)
+        end
+        EnsureSettings()
+        addon:Print("BG status: active=" .. idx .. "/" .. n .. ", saved=" .. (TC_Settings.bgIndex or 0))
+    elseif string.find(cmd, "^bg%s+reset") then
+        EnsureSettings(); TC_Settings.bgIndex = 1; addon:Print("BG index reset to 1")
+    elseif string.find(cmd, "^bg%s+set%s+%d+") then
+        local _, _, num = string.find(cmd, "^bg%s+set%s+(%d+)")
+        if num then
+            EnsureSettings()
+            TC_Settings.bgIndex = tonumber(num)
+            addon:Print("BG index set to " .. num .. "; reinit with /tc bg on")
+        end
     elseif string.find(cmd, "^bg%s+on") then
         EnsureSettings()
         TC_Settings.bgRotate = true
@@ -1752,7 +1957,7 @@ function SlashCmdList.TC(msg)
         addon:RefreshCalcBackdrop()
         addon:Print("Background rotator: OFF")
     else
-        addon:Print("Usage: /tc [calc | reset | info | export | import | bg on | bg off]")
+        addon:Print("Usage: /tc [calc | reset | info | export | import | bg on | bg off | bg debug on|off | bg status | bg reset]")
     end
 end
 -- Rotating background for calculator
@@ -1812,62 +2017,170 @@ function addon:InitBackgroundRotator(frame)
 
     if table.getn(frames) == 0 then return end
     frame._bgFrames = frames
-    -- Initial alphas set after selecting start index
-    -- Choose starting index (preserve if configured)
-    local startIndex = 1
-    if TC_Settings and TC_Settings.bgPreserve and tonumber(TC_Settings.bgIndex) then
-        local n = table.getn(frame._bgFrames)
-        local idx = tonumber(TC_Settings.bgIndex) or 1
-        if idx < 1 then idx = 1 end
-        if idx > n then
-            local a = (idx - 1)
-            idx = (a - math.floor(a / n) * n) + 1
-        end
-        startIndex = idx
+    EnsureSettings()
+    local n = table.getn(frame._bgFrames)
+    -- Choose starting index from saved; clamp to [1..n]
+    local startIndex = tonumber(TC_Settings and TC_Settings.bgIndex) or 1
+    if startIndex < 1 then startIndex = 1 end
+    if startIndex > n then
+        local a = (startIndex - 1)
+        startIndex = (a - math.floor(a / n) * n) + 1
     end
-    frame._bgIndex = startIndex
-    frame._bgTimer = 0
-    -- Set initial alphas based on chosen start
-    for i, h in ipairs(frame._bgFrames) do
-        h:SetAlpha(i == frame._bgIndex and 1 or 0)
-    end
-    frame:SetScript("OnUpdate", function()
-        frame._bgTimer = frame._bgTimer + arg1
-        local n = table.getn(frame._bgFrames)
-        if n <= 1 then return end
-        local cycle = (BG_ROTATE_PERIOD + BG_FADE_DURATION)
-        -- Lua 5.0 (1.12) lacks math.fmod/% in some clients; do manual modulo
-        local t = frame._bgTimer - math.floor(frame._bgTimer / cycle) * cycle
-        local active = frame._bgIndex
+    frame._bgStart = startIndex
+    TC_Settings.bgIndex = startIndex
+    local cycle = (BG_ROTATE_PERIOD + BG_FADE_DURATION)
+    frame._bgBase = GetTime() - (startIndex - 1) * cycle
+    addon:Debug("BG init (time-base): n=" .. n .. " start=" .. startIndex)
+
+    local function StepBackgroundTime()
+        if not frame or not frame._bgFrames then return end
+        if not frame:IsShown() then return end
+        if frame._bgPaused then return end
+        local now = GetTime()
+        local elapsed = now - (frame._bgBase or now)
+        local k = math.floor(elapsed / cycle)
+        local t = elapsed - k * cycle
+        local start = frame._bgStart or 1
+        local active = 1 + (((start - 1) + k) - math.floor(((start - 1) + k) / n) * n)
         local nextIndex = (active < n) and (active + 1) or 1
         if t < BG_ROTATE_PERIOD then
             frame._bgFrames[active]:SetAlpha(1)
             frame._bgFrames[nextIndex]:SetAlpha(0)
+            addon:Debug("BG step: hold active=" .. active .. " next=" .. nextIndex .. " t=" .. string.format("%.2f", t))
         else
             local f = (t - BG_ROTATE_PERIOD) / BG_FADE_DURATION
             if f > 1 then f = 1 end
             frame._bgFrames[active]:SetAlpha(1 - f)
             frame._bgFrames[nextIndex]:SetAlpha(f)
-            if f >= 1 then
-                frame._bgIndex = nextIndex
-                if TC_Settings and TC_Settings.bgPreserve then
-                    TC_Settings.bgIndex = nextIndex
-                end
-            end
+            addon:Debug("BG fade: active=" .. active .. " -> next=" .. nextIndex .. " f=" .. string.format("%.2f", f))
         end
-        -- Ensure no other slides are visible due to any outside interference
+        -- Zero all other frames to avoid ghost alphas
         for i = 1, n do
-            if i ~= frame._bgIndex and i ~= ((frame._bgIndex < n) and (frame._bgIndex + 1) or 1) then
+            if i ~= active and i ~= nextIndex then
                 frame._bgFrames[i]:SetAlpha(0)
             end
         end
-    end)
+        -- Persist saved index during hold for stable resume
+        if t < BG_ROTATE_PERIOD then
+            if TC_Settings and TC_Settings.bgIndex ~= active then
+                TC_Settings.bgIndex = active
+                addon:Debug("BG save: active=" .. active)
+            end
+        end
+    end
+
+    -- Expose stepper so pause/resume can reuse it
+    frame._bgStep = StepBackgroundTime
+
+    -- Initialize alphas once using the same math
+    frame._bgStep()
+
+    -- Prefer AceTimer if embedded, otherwise use OnUpdate
+    if addon.ScheduleRepeatingTimer and addon.CancelTimer then
+        frame._bgStepper = "timer"
+        frame._bgTimerHandle = addon:ScheduleRepeatingTimer(function()
+            frame._bgStep()
+        end, 0.05)
+    else
+        frame._bgStepper = "onupdate"
+        frame:SetScript("OnUpdate", function()
+            frame._bgStep()
+        end)
+    end
+end
+
+-- Tiny scheduler helper (AceTimer if present, or one-shot OnUpdate)
+function addon:After(delay, fn)
+    if self.ScheduleTimer then
+        self:ScheduleTimer(function()
+            pcall(fn)
+        end, delay)
+    else
+        local f = CreateFrame("Frame")
+        local t = 0
+        f:SetScript("OnUpdate", function()
+            t = t + arg1
+            if t >= delay then
+                f:SetScript("OnUpdate", nil)
+                pcall(fn)
+            end
+        end)
+    end
 end
 
 function addon:DisableBackgroundRotator(frame)
     frame = frame or calculatorFrame
     if not frame or not frame._bgFrames then return end
+    if addon.CancelTimer and frame._bgTimerHandle then
+        addon:CancelTimer(frame._bgTimerHandle, true)
+        frame._bgTimerHandle = nil
+    end
     frame:SetScript("OnUpdate", nil)
     for _, h in ipairs(frame._bgFrames) do h:Hide() end
     frame._bgFrames = nil
+end
+
+-- Pause/resume rotator during drag to avoid old-client instability
+function addon:PauseBackgroundRotator(frame)
+    frame = frame or calculatorFrame
+    if not frame or not frame._bgFrames then return end
+    EnsureSettings()
+    local n = table.getn(frame._bgFrames)
+    if n == 0 then return end
+    -- Fully disable rotator (safest on 1.12 during re-anchoring)
+    frame._bgPaused = true
+    frame._bgPausedWasEnabled = true
+    addon:DisableBackgroundRotator(frame)
+end
+
+function addon:ResumeBackgroundRotator(frame)
+    frame = frame or calculatorFrame
+    if not frame then return end
+    local want = (TC_Settings and TC_Settings.bgRotate) and frame._bgPausedWasEnabled
+    frame._bgPaused = false
+    frame._bgPausedWasEnabled = nil
+    if not want then return end
+    -- Recreate after a tiny delay to avoid post-drop engine instability
+    addon:After(0.10, function()
+        if not frame._bgFrames and (TC_Settings and TC_Settings.bgRotate) then
+            addon:InitBackgroundRotator(frame)
+        end
+    end)
+end
+
+-- Freeze/unfreeze rotator without destroying frames (for Move Mode)
+function addon:FreezeBackgroundRotator(frame)
+    frame = frame or calculatorFrame
+    if not frame or not frame._bgFrames then return end
+    local n = table.getn(frame._bgFrames)
+    if n == 0 then return end
+    local cycle = (BG_ROTATE_PERIOD + BG_FADE_DURATION)
+    local now = GetTime()
+    local elapsed = now - (frame._bgBase or now)
+    local k = math.floor(elapsed / cycle)
+    local start = frame._bgStart or 1
+    local active = 1 + (((start - 1) + k) - math.floor(((start - 1) + k) / n) * n)
+    -- Show only the active slide
+    for i = 1, n do frame._bgFrames[i]:SetAlpha(0) end
+    frame._bgFrames[active]:SetAlpha(1)
+    frame._bgPaused = true
+    if TC_Settings then TC_Settings.bgIndex = active end
+end
+
+function addon:UnfreezeBackgroundRotator(frame)
+    frame = frame or calculatorFrame
+    if not frame or not frame._bgFrames then return end
+    local n = table.getn(frame._bgFrames)
+    if n == 0 then return end
+    local cycle = (BG_ROTATE_PERIOD + BG_FADE_DURATION)
+    local now = GetTime()
+    local elapsed = now - (frame._bgBase or now)
+    local k = math.floor(elapsed / cycle)
+    local start = frame._bgStart or 1
+    local active = 1 + (((start - 1) + k) - math.floor(((start - 1) + k) / n) * n)
+    -- Re-base so we resume holding on the current active
+    frame._bgStart = active
+    frame._bgBase = GetTime() - (active - 1) * cycle
+    frame._bgPaused = false
+    if frame._bgStep then frame._bgStep() end
 end
