@@ -2,12 +2,12 @@
 ## Title: TalentCrafter
 ## Notes: Talent calculator + talent list viewer for TWOW
 ## Author: OrionAF
-## Version: 1.0.3
+## Version: 1.1.0
 ## SavedVariables: TC_CustomBuilds, TC_Settings
 
 # Embedded libraries (Ace3v and companions)
-lib/Ace3.toc
-lib/LibDataBroker-1.1.lua
-lib/LibDBIcon-1.0.lua
+lib\Ace3.toc
+lib\LibDataBroker-1.1.lua
+lib\LibDBIcon-1.0.lua
 
 TalentCrafter.lua

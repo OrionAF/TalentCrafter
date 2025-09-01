@@ -1381,7 +1381,7 @@ function addon:CreateFrames()
         local rel = getglobal(pos.relativeTo or "UIParent") or UIParent
         calculatorFrame:SetPoint(pos.point or "CENTER", rel, pos.relativePoint or "CENTER", pos.x or 0, pos.y or 0)
     end
-    
+
     -- Move mode overlay (manual drag without StartMoving/StopMoving)
     local mover = CreateFrame("Frame", "TC_MoveOverlay", calculatorFrame)
     mover:SetAllPoints(calculatorFrame)
@@ -1395,7 +1395,7 @@ function addon:CreateFrames()
     mvText:SetPoint("TOP", mover, "TOP", 0, -8)
     mvText:SetText("Move Mode – drag anywhere")
     mover.text = mvText
-    
+
     local dragging = false
     local dx, dy = 0, 0
     mover:SetScript("OnMouseDown", function()
@@ -1856,6 +1856,52 @@ function addon:TryInitializeNow()
     end
     return addon.isInitialized
 end
+
+-- NEWLY IMPLEMENTED FUNCTION
+function addon:DumpZOrder()
+    self:Print("|cFFDAA520--- TalentCrafter Z-Order ---|r")
+
+    -- Helper to print frame details
+    local function printInfo(frame, label)
+        if not frame then
+            self:Print(string.format("%s: |cFFFF8080Not found.|r", label))
+            return
+        end
+
+        local name = label or (frame.GetName and frame:GetName()) or "(anonymous)"
+        local level = frame:GetFrameLevel() or -1
+        local strata = frame:GetFrameStrata() or "UNKNOWN"
+        local shown = "hidden"
+        if frame:IsShown() then
+            shown = "shown"
+        end
+
+        self:Print(string.format("%s: Level %d, Strata %s [%s]", name, level, strata, shown))
+    end
+
+    -- Print info for major frames
+    printInfo(mainFrame, "Main Guide (TalentCrafterFrame)")
+    printInfo(calculatorFrame, "Calculator (TC_TalentCalculator)")
+
+    if calculatorFrame then
+        if calculatorFrame._bgFrames and calculatorFrame._bgFrames[1] then
+            printInfo(calculatorFrame._bgFrames[1], "  |-- BG Rotator Holder 1")
+        end
+        printInfo(calculatorFrame.calcOverlay, "  |-- Calc Overlay (text)")
+        printInfo(getglobal("TC_MoveButton"), "  |-- Move Button")
+        printInfo(addon._moveOverlay, "  |-- Move Overlay")
+
+        for i = 1, 3 do
+            printInfo(getglobal("TC_CalcTree" .. i), string.format("  |-- Tree %d", i))
+            local tree = getglobal("TC_CalcTree" .. i)
+            if tree then
+                printInfo(tree.branchLayer, string.format("      |-- Tree %d Branch Layer", i))
+                printInfo(tree.arrowLayer, string.format("      |-- Tree %d Arrow Layer", i))
+            end
+        end
+    end
+end
+
 
 function SlashCmdList.TC(msg)
 
