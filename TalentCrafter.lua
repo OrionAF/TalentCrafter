@@ -63,35 +63,156 @@ local USE_TREE_BACKGROUNDS = false -- single rotating background instead
 
 -- Background rotator timing
 local BG_ROTATE_PERIOD = 12 -- seconds fully visible
-local BG_FADE_DURATION = 2  -- seconds crossfade
+local BG_FADE_DURATION = 2 -- seconds crossfade
 
 -- Rotating background artwork and credits
 local ROTATING_BACKGROUNDS = {
-    { title = "Kruul Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Kruul_Artwork", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Grim Reaches Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Reaches_Illustration", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Lava Boss Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lava_Boss_Illustration", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Ironforge Music Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\ironforge_music", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Development Basement Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Development_Basement_Artwork", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Game Master Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\GM_Artwork_2", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Northwind Artwork", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Northwind Artwork 2", texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art_2", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Priest T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\priest_t35", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Rogue/Mage T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\rogue_mage", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Shaman/Warrior T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Shaman_Warrior_T35", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Paladin/Warlock T3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\paladin_lock", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Grim Illustration", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Illustration", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Level One Lunatic", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lvl1_Lunatic_Illustration", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Sorrowguard Keep", texture = "Interface\\AddOns\\TalentCrafter\\Art\\sorrowguard_keep", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Undead Hunter Tier 3.5", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Undead_Hunter_Tier35", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Turtle WoW Anniversary", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Turtle_Wow_Anniversary_Illustration", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Rooting out the Evil", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Druid_Tier_Illustration_4k", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Gnarlmoon", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Gnarlmoon2", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Karazhan Anomalus", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Karazhan-Anomalus-Illustration", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Stormwrought Ruins", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Balor_Illustration", artist = "Lionel Schramm", website = "https://lionelschramm.carrd.co/" },
-    { title = "Beyond the Greymane Wall", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_giln", artist = "Stonegut" },
-    { title = "Deep in the Green", texture = "Interface\\AddOns\\TalentCrafter\\Art\\Deep_in_the_Green", artist = "Mikkel Lund Molberg" },
-    { title = "Mysteries of Azeroth", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_adventurers", artist = "Misho Tenev" },
-    { title = "Crescent Grove", texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_crescent_grove_no_logo", artist = "Ghor" }
+    {
+        title = "Kruul Artwork",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Kruul_Artwork",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Grim Reaches Illustration",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Reaches_Illustration",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Lava Boss Illustration",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lava_Boss_Illustration",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Ironforge Music Artwork",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\ironforge_music",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Development Basement Artwork",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Development_Basement_Artwork",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Game Master Artwork",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\GM_Artwork_2",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Northwind Artwork",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Northwind Artwork 2",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\northwind_art_2",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Priest T3.5",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\priest_t35",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Rogue/Mage T3.5",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\rogue_mage",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Shaman/Warrior T3.5",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Shaman_Warrior_T35",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Paladin/Warlock T3.5",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\paladin_lock",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Grim Illustration",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Grim_Illustration",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Level One Lunatic",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Lvl1_Lunatic_Illustration",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Sorrowguard Keep",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\sorrowguard_keep",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Undead Hunter Tier 3.5",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Undead_Hunter_Tier35",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Turtle WoW Anniversary",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Turtle_Wow_Anniversary_Illustration",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Rooting out the Evil",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Druid_Tier_Illustration_4k",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Gnarlmoon",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Gnarlmoon2",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Karazhan Anomalus",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Karazhan-Anomalus-Illustration",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Stormwrought Ruins",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Balor_Illustration",
+        artist = "Lionel Schramm",
+        website = "https://lionelschramm.carrd.co/"
+    },
+    {
+        title = "Beyond the Greymane Wall",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_giln",
+        artist = "Stonegut"
+    },
+    {
+        title = "Deep in the Green",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\Deep_in_the_Green",
+        artist = "Mikkel Lund Molberg"
+    },
+    {
+        title = "Mysteries of Azeroth",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_adventurers",
+        artist = "Misho Tenev"
+    },
+    {
+        title = "Crescent Grove",
+        texture = "Interface\\AddOns\\TalentCrafter\\Art\\art_crescent_grove_no_logo",
+        artist = "Ghor"
+    }
 }
 
 -- ===== Helpers ==============================================================
@@ -99,13 +220,23 @@ local ROTATING_BACKGROUNDS = {
 -- Settings defaults
 local function EnsureSettings()
     if not TC_Settings then
-        TC_Settings = { bgRotate = false, bgPreserve = false, bgAspect = 2.0, minimap = {}, bgDebug = false }
+        TC_Settings = {bgRotate = false, bgPreserve = false, bgAspect = 2.0, minimap = {}, bgDebug = false}
     else
-        if TC_Settings.bgRotate == nil then TC_Settings.bgRotate = false end
-        if TC_Settings.bgPreserve == nil then TC_Settings.bgPreserve = false end
-        if not TC_Settings.bgAspect then TC_Settings.bgAspect = 2.0 end
-        if type(TC_Settings.minimap) ~= "table" then TC_Settings.minimap = {} end
-        if TC_Settings.bgDebug == nil then TC_Settings.bgDebug = false end
+        if TC_Settings.bgRotate == nil then
+            TC_Settings.bgRotate = false
+        end
+        if TC_Settings.bgPreserve == nil then
+            TC_Settings.bgPreserve = false
+        end
+        if not TC_Settings.bgAspect then
+            TC_Settings.bgAspect = 2.0
+        end
+        if type(TC_Settings.minimap) ~= "table" then
+            TC_Settings.minimap = {}
+        end
+        if TC_Settings.bgDebug == nil then
+            TC_Settings.bgDebug = false
+        end
     end
 end
 
@@ -125,7 +256,9 @@ end
 local function SplitString(s, sep)
     sep = sep or "%s"
     local t = {}
-    if not s or s == "" then return t end
+    if not s or s == "" then
+        return t
+    end
     -- Only single-char separators are expected (":", "-", ",").
     -- Escape magic characters when building the class for Lua 5.0 patterns.
     if sep ~= "%s" and string.len(sep) == 1 then
@@ -153,9 +286,10 @@ end
 
 local function FindTalentByPosition(tabIndex, tier, column)
     -- Prefer cached lookup if available
-    if addon.posIndex and addon.posIndex[tabIndex]
-        and addon.posIndex[tabIndex][tier]
-        and addon.posIndex[tabIndex][tier][column] then
+    if
+        addon.posIndex and addon.posIndex[tabIndex] and addon.posIndex[tabIndex][tier] and
+            addon.posIndex[tabIndex][tier][column]
+     then
         return addon.posIndex[tabIndex][tier][column]
     end
     -- Fallback to linear scan
@@ -174,8 +308,12 @@ end
 do
     local AceHook = LibStub and LibStub("AceHook-3.0", true)
     local AceTimer = LibStub and LibStub("AceTimer-3.0", true)
-    if AceHook and AceHook.Embed then AceHook:Embed(addon) end
-    if AceTimer and AceTimer.Embed then AceTimer:Embed(addon) end
+    if AceHook and AceHook.Embed then
+        AceHook:Embed(addon)
+    end
+    if AceTimer and AceTimer.Embed then
+        AceTimer:Embed(addon)
+    end
 
     local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
     local DBIcon = LibStub and LibStub("LibDBIcon-1.0", true)
@@ -183,13 +321,19 @@ do
     -- Hook TalentFrame::OnShow using AceHook if available
     function addon:InstallTalentFrameHook()
         local TF = getglobal("TalentFrame")
-        if not TF then return end
+        if not TF then
+            return
+        end
         if self.HookScript and not self._aceHookedTF then
-            self:HookScript(TF, "OnShow", function()
-                if not addon.isInitialized then
-                    addon:TryInitializeNow()
+            self:HookScript(
+                TF,
+                "OnShow",
+                function()
+                    if not addon.isInitialized then
+                        addon:TryInitializeNow()
+                    end
                 end
-            end)
+            )
             self._aceHookedTF = true
         else
             -- Fallback: use the original wrapper hook
@@ -201,38 +345,48 @@ do
 
     -- Minimap/LDB launcher
     function addon:InitLauncher()
-        if not LDB or not DBIcon then return end
-        if self._ldb then return end
+        if not LDB or not DBIcon then
+            return
+        end
+        if self._ldb then
+            return
+        end
         EnsureSettings()
-        self._ldb = LDB:NewDataObject("TalentCrafter", {
-            type = "launcher",
-            label = "TalentCrafter",
-            icon = "Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up",
-            OnClick = function(_, button)
-                if button == "LeftButton" then
-                    -- Toggle calculator
-                    if not addon.isInitialized then
-                        addon:TryInitializeNow()
-                    end
-                    if calculatorFrame and calculatorFrame:IsShown() then
-                        calculatorFrame:Hide()
-                    else
-                        if calculatorFrame then
-                            calculatorFrame:Show()
-                            addon:UpdateCalculatorOverlays()
-                            for tab = 1, 3 do addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab)) end
+        self._ldb =
+            LDB:NewDataObject(
+            "TalentCrafter",
+            {
+                type = "launcher",
+                label = "TalentCrafter",
+                icon = "Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up",
+                OnClick = function(_, button)
+                    if button == "LeftButton" then
+                        -- Toggle calculator
+                        if not addon.isInitialized then
+                            addon:TryInitializeNow()
                         end
+                        if calculatorFrame and calculatorFrame:IsShown() then
+                            calculatorFrame:Hide()
+                        else
+                            if calculatorFrame then
+                                calculatorFrame:Show()
+                                addon:UpdateCalculatorOverlays()
+                                for tab = 1, 3 do
+                                    addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
+                                end
+                            end
+                        end
+                    else
+                        addon:ToggleInfo()
                     end
-                else
-                    addon:ToggleInfo()
+                end,
+                OnTooltipShow = function(tt)
+                    tt:AddLine("TalentCrafter")
+                    tt:AddLine("Left-click: Toggle calculator", 0.8, 0.8, 0.8)
+                    tt:AddLine("Right-click: Info", 0.8, 0.8, 0.8)
                 end
-            end,
-            OnTooltipShow = function(tt)
-                tt:AddLine("TalentCrafter")
-                tt:AddLine("Left-click: Toggle calculator", 0.8, 0.8, 0.8)
-                tt:AddLine("Right-click: Info", 0.8, 0.8, 0.8)
-            end
-        })
+            }
+        )
         DBIcon:Register("TalentCrafter", self._ldb, TC_Settings.minimap)
     end
 end
@@ -283,7 +437,9 @@ end
 
 -- Adjust calculator backdrop fill to keep border visible while showing art
 function addon:RefreshCalcBackdrop()
-    if not calculatorFrame or not calculatorFrame.SetBackdropColor then return end
+    if not calculatorFrame or not calculatorFrame.SetBackdropColor then
+        return
+    end
     if TC_Settings and TC_Settings.bgRotate then
         calculatorFrame:SetBackdropColor(0, 0, 0, 0.00)
     else
@@ -293,7 +449,9 @@ end
 
 -- Info window showing background credits
 local function BuildInfoFrame()
-    if addon.infoFrame then return end
+    if addon.infoFrame then
+        return
+    end
     local f = CreateFrame("Frame", "TC_InfoFrame", UIParent)
     f:SetWidth(420)
     f:SetHeight(480)
@@ -344,7 +502,9 @@ local function BuildInfoFrame()
 end
 
 function addon:ToggleInfo()
-    if not addon.infoFrame then BuildInfoFrame() end
+    if not addon.infoFrame then
+        BuildInfoFrame()
+    end
     if addon.infoFrame:IsShown() then
         addon.infoFrame:Hide()
     else
@@ -358,10 +518,13 @@ local function BuildTalentBackground(frame, basename)
     -- Wait for valid size before drawing
     local W, H = frame:GetWidth(), frame:GetHeight()
     if not W or not H or W <= 0 or H <= 0 then
-        frame:SetScript("OnSizeChanged", function(self)
-            self:SetScript("OnSizeChanged", nil)
-            BuildTalentBackground(self, basename)
-        end)
+        frame:SetScript(
+            "OnSizeChanged",
+            function(self)
+                self:SetScript("OnSizeChanged", nil)
+                BuildTalentBackground(self, basename)
+            end
+        )
         return
     end
 
@@ -482,7 +645,9 @@ end
 
 -- Turtle talents data loader (for per-rank descriptions)
 local function EnsureTurtleTalentData()
-    if addon._descCache then return true end
+    if addon._descCache then
+        return true
+    end
     if not Turtle_TalentsData then
         if LoadAddOn then
             pcall(LoadAddOn, "Turtle_InspectTalentsUI")
@@ -492,7 +657,9 @@ local function EnsureTurtleTalentData()
             end
         end
     end
-    if not Turtle_TalentsData then return false end
+    if not Turtle_TalentsData then
+        return false
+    end
     local cache = {}
     for class, trees in pairs(Turtle_TalentsData) do
         cache[class] = {}
@@ -516,7 +683,9 @@ end
 
 -- Display talent tooltip with Turtle per-rank data
 function addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
-    if not ownerBtn or not GameTooltip then return end
+    if not ownerBtn or not GameTooltip then
+        return
+    end
     GameTooltip:SetOwner(ownerBtn, "ANCHOR_RIGHT")
     GameTooltip:ClearLines()
 
@@ -531,8 +700,12 @@ function addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
         if type(rt) == "string" then
             -- Lua 5.0: use string.find captures instead of string.match
             local _, _, a, b = string.find(rt, "^(%d+)%s*/%s*(%d+)$")
-            if a then plannedFromText = tonumber(a) end
-            if b then maxFromText = tonumber(b) end
+            if a then
+                plannedFromText = tonumber(a)
+            end
+            if b then
+                maxFromText = tonumber(b)
+            end
         end
     end
     -- Prefer button-cached values if available (most accurate mid-click),
@@ -576,7 +749,9 @@ function addon:ShowTalentTooltip(ownerBtn, tabIndex, talentIndex)
             local dash = string.find(k, "-")
             if dash then
                 local t = tonumber(string.sub(k, 1, dash - 1))
-                if t == tabIndex then tabSpent = tabSpent + v end
+                if t == tabIndex then
+                    tabSpent = tabSpent + v
+                end
             end
         end
         local ok = tabSpent >= reqPoints
@@ -606,13 +781,15 @@ end
 function addon:RevalidatePickOrder()
     local newOrder = {}
     local counts = {}
-    local tabSpent = { [1]=0, [2]=0, [3]=0 }
+    local tabSpent = {[1] = 0, [2] = 0, [3] = 0}
     local function addCount(id)
         counts[id] = (counts[id] or 0) + 1
         local dash = string.find(id, "-")
         if dash then
             local t = tonumber(string.sub(id, 1, dash - 1))
-            if t then tabSpent[t] = (tabSpent[t] or 0) + 1 end
+            if t then
+                tabSpent[t] = (tabSpent[t] or 0) + 1
+            end
         end
     end
     for _, id in ipairs(self.pickOrder) do
@@ -651,7 +828,7 @@ end
 
 function addon:UpdateCalculatorOverlays()
     local counts = currentRankCounts()
-    local tabTotals = { [1]=0, [2]=0, [3]=0 }
+    local tabTotals = {[1] = 0, [2] = 0, [3] = 0}
     for k, v in pairs(counts) do
         local dash = string.find(k, "-")
         if dash then
@@ -713,8 +890,16 @@ function addon:UpdateCalculatorOverlays()
     local className = classToken or "CLASS"
     local left = 51 - (tabTotals[1] + tabTotals[2] + tabTotals[3])
     if calculatorFrame and calculatorFrame.summaryText then
-        calculatorFrame.summaryText:SetText(string.format("%s %d/%d/%d  |  Points left: %d",
-            className, tabTotals[1] or 0, tabTotals[2] or 0, tabTotals[3] or 0, max(0, left)))
+        calculatorFrame.summaryText:SetText(
+            string.format(
+                "%s %d/%d/%d  |  Points left: %d",
+                className,
+                tabTotals[1] or 0,
+                tabTotals[2] or 0,
+                tabTotals[3] or 0,
+                max(0, left)
+            )
+        )
     end
 end
 
@@ -797,7 +982,9 @@ function addon:OnTalentRightClick(tabIndex, talentIndex, ownerBtn)
         if self.pickOrder[i] == id then
             table.remove(self.pickOrder, i)
             -- Revalidate the remaining picks after removal
-            if self.RevalidatePickOrder then self:RevalidatePickOrder() end
+            if self.RevalidatePickOrder then
+                self:RevalidatePickOrder()
+            end
             -- Update cached planned rank for hovered button before overlays
             if ownerBtn then
                 local counts = currentRankCounts()
@@ -826,9 +1013,13 @@ function addon:FillTalentToMax(tabIndex, talentIndex, ownerBtn)
     for _i = 1, maxRank do
         local counts = currentRankCounts()
         local have = counts[id] or 0
-        if have == prevCount then break end
+        if have == prevCount then
+            break
+        end
         prevCount = have
-        if have >= maxRank then break end
+        if have >= maxRank then
+            break
+        end
         local before = table.getn(self.pickOrder)
         self:OnTalentClick(tabIndex, talentIndex, ownerBtn)
         if table.getn(self.pickOrder) == before then
@@ -883,7 +1074,9 @@ function addon:ImportFromString(s)
             end
         end
     end
-    if self.RevalidatePickOrder then self:RevalidatePickOrder() end
+    if self.RevalidatePickOrder then
+        self:RevalidatePickOrder()
+    end
     addon:UpdateCalculatorOverlays()
     addon:Print("Build imported successfully.")
     for t = 1, 3 do
@@ -965,10 +1158,14 @@ local function GetArrowTex(tree)
 end
 local function HideUnused(tree)
     for i = tree._branchTexIndex, table.getn(tree._branches) do
-        if tree._branches[i] then tree._branches[i]:Hide() end
+        if tree._branches[i] then
+            tree._branches[i]:Hide()
+        end
     end
     for i = tree._arrowTexIndex, table.getn(tree._arrows) do
-        if tree._arrows[i] then tree._arrows[i]:Hide() end
+        if tree._arrows[i] then
+            tree._arrows[i]:Hide()
+        end
     end
 end
 
@@ -1282,16 +1479,19 @@ function addon:CreateFrames()
             end
         end
         UpdateToggleIcon()
-        toggle:SetScript("OnClick", function()
-            addon.viewerCollapsed = not addon.viewerCollapsed
-            if addon.viewerCollapsed then
-                mainFrame:Hide()
-            else
-                mainFrame:Show()
+        toggle:SetScript(
+            "OnClick",
+            function()
+                addon.viewerCollapsed = not addon.viewerCollapsed
+                if addon.viewerCollapsed then
+                    mainFrame:Hide()
+                else
+                    mainFrame:Show()
+                end
+                UpdateToggleIcon()
             end
-            UpdateToggleIcon()
-        end)
-        -- Keep viewer hidden if collapsed when TF is shown again (child hidden state persists)
+        )
+    -- Keep viewer hidden if collapsed when TF is shown again (child hidden state persists)
     end
 
     scrollFrame = CreateFrame("ScrollFrame", "TC_ScrollFrame", mainFrame, "UIPanelScrollFrameTemplate")
@@ -1362,7 +1562,9 @@ function addon:CreateFrames()
     ApplyDialogBackdrop(calculatorFrame)
     addon:RefreshCalcBackdrop()
     calculatorFrame:Hide()
-    if UISpecialFrames then tinsert(UISpecialFrames, "TC_TalentCalculator") end
+    if UISpecialFrames then
+        tinsert(UISpecialFrames, "TC_TalentCalculator")
+    end
     -- Rotating global background (lazy-init; can be toggled via /tc bg on)
     EnsureSettings()
     if TC_Settings.bgRotate then
@@ -1398,42 +1600,61 @@ function addon:CreateFrames()
 
     local dragging = false
     local dx, dy = 0, 0
-    mover:SetScript("OnMouseDown", function()
-        local scale = UIParent:GetScale() or 1
-        local x, y = GetCursorPosition()
-        x, y = x / scale, y / scale
-        local left = calculatorFrame:GetLeft() or 0
-        local bottom = calculatorFrame:GetBottom() or 0
-        dx = x - left
-        dy = y - bottom
-        dragging = true
-    end)
-    mover:SetScript("OnMouseUp", function()
-        dragging = false
-        -- persist position once after release
-        EnsureSettings()
-        if TC_Settings then
-            local ok, p, rel, rp, x, y = pcall(calculatorFrame.GetPoint, calculatorFrame)
-            if ok then
-                local relName = "UIParent"
-                if rel and rel.GetName then
-                    local ok2, name = pcall(rel.GetName, rel)
-                    if ok2 and name then relName = name end
+    mover:SetScript(
+        "OnMouseDown",
+        function()
+            local scale = UIParent:GetScale() or 1
+            local x, y = GetCursorPosition()
+            x, y = x / scale, y / scale
+            local left = calculatorFrame:GetLeft() or 0
+            local bottom = calculatorFrame:GetBottom() or 0
+            dx = x - left
+            dy = y - bottom
+            dragging = true
+        end
+    )
+    mover:SetScript(
+        "OnMouseUp",
+        function()
+            dragging = false
+            -- persist position once after release
+            EnsureSettings()
+            if TC_Settings then
+                local ok, p, rel, rp, x, y = pcall(calculatorFrame.GetPoint, calculatorFrame)
+                if ok then
+                    local relName = "UIParent"
+                    if rel and rel.GetName then
+                        local ok2, name = pcall(rel.GetName, rel)
+                        if ok2 and name then
+                            relName = name
+                        end
+                    end
+                    TC_Settings.calcPos = {
+                        point = p or "BOTTOMLEFT",
+                        relativeTo = relName,
+                        relativePoint = rp or "BOTTOMLEFT",
+                        x = x or 0,
+                        y = y or 0
+                    }
                 end
-                TC_Settings.calcPos = { point = p or "BOTTOMLEFT", relativeTo = relName, relativePoint = rp or "BOTTOMLEFT", x = x or 0, y = y or 0 }
             end
         end
-    end)
-    mover:SetScript("OnUpdate", function()
-        if not dragging then return end
-        local scale = UIParent:GetScale() or 1
-        local x, y = GetCursorPosition()
-        x, y = x / scale, y / scale
-        local newLeft = x - (dx or 0)
-        local newBottom = y - (dy or 0)
-        calculatorFrame:ClearAllPoints()
-        calculatorFrame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", newLeft, newBottom)
-    end)
+    )
+    mover:SetScript(
+        "OnUpdate",
+        function()
+            if not dragging then
+                return
+            end
+            local scale = UIParent:GetScale() or 1
+            local x, y = GetCursorPosition()
+            x, y = x / scale, y / scale
+            local newLeft = x - (dx or 0)
+            local newBottom = y - (dy or 0)
+            calculatorFrame:ClearAllPoints()
+            calculatorFrame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", newLeft, newBottom)
+        end
+    )
     addon._moveOverlay = mover
     -- Put summary text on a tiny overlay frame above the rotator and trees
     local calcOverlay = CreateFrame("Frame", nil, calculatorFrame)
@@ -1471,31 +1692,41 @@ function addon:CreateFrames()
     -- Ensure the button is above the move overlay so it remains clickable
     moveBtn:SetFrameStrata(calculatorFrame:GetFrameStrata())
     moveBtn:SetFrameLevel((mover:GetFrameLevel() or 0) + 1)
-    moveBtn:SetScript("OnClick", function()
-        if addon._moveMode then
-            -- Exit move mode
-            addon._moveMode = false
-            dragging = false
-            if addon._moveOverlay then addon._moveOverlay:Hide() end
-            moveBtn:SetText("Move")
-            -- Safely re-enable background rotator shortly after exiting move mode
-            EnsureSettings()
-            if TC_Settings.bgRotate and calculatorFrame and not calculatorFrame._bgFrames then
-                addon:After(0.10, function()
-                    -- Re-check guards inside delayed call
-                    if TC_Settings.bgRotate and calculatorFrame and not calculatorFrame._bgFrames then
-                        addon:InitBackgroundRotator(calculatorFrame)
-                    end
-                end)
+    moveBtn:SetScript(
+        "OnClick",
+        function()
+            if addon._moveMode then
+                -- Exit move mode
+                addon._moveMode = false
+                dragging = false
+                if addon._moveOverlay then
+                    addon._moveOverlay:Hide()
+                end
+                moveBtn:SetText("Move")
+                -- Safely re-enable background rotator shortly after exiting move mode
+                EnsureSettings()
+                if TC_Settings.bgRotate and calculatorFrame and not calculatorFrame._bgFrames then
+                    addon:After(
+                        0.10,
+                        function()
+                            -- Re-check guards inside delayed call
+                            if TC_Settings.bgRotate and calculatorFrame and not calculatorFrame._bgFrames then
+                                addon:InitBackgroundRotator(calculatorFrame)
+                            end
+                        end
+                    )
+                end
+            else
+                -- Enter move mode: freeze rotator and show overlay for manual drag
+                addon._moveMode = true
+                addon:FreezeBackgroundRotator(calculatorFrame)
+                if addon._moveOverlay then
+                    addon._moveOverlay:Show()
+                end
+                moveBtn:SetText("Done")
             end
-        else
-            -- Enter move mode: freeze rotator and show overlay for manual drag
-            addon._moveMode = true
-            addon:FreezeBackgroundRotator(calculatorFrame)
-            if addon._moveOverlay then addon._moveOverlay:Show() end
-            moveBtn:SetText("Done")
         end
-    end)
+    )
 
     -- trees + backgrounds
     for tab = 1, 3 do
@@ -1554,18 +1785,27 @@ function addon:CreateFrames()
         clearTree:SetHeight(18)
         clearTree:SetText("Clear points")
         clearTree:SetPoint("BOTTOM", tree, "BOTTOM", 0, 6)
-        clearTree:SetScript("OnClick", function()
-            local keep = {}
-            for _, id in ipairs(addon.pickOrder) do
-                local dash = string.find(id, "-")
-                local t = tonumber(string.sub(id, 1, dash - 1))
-                if t ~= tree._tab then tinsert(keep, id) end
+        clearTree:SetScript(
+            "OnClick",
+            function()
+                local keep = {}
+                for _, id in ipairs(addon.pickOrder) do
+                    local dash = string.find(id, "-")
+                    local t = tonumber(string.sub(id, 1, dash - 1))
+                    if t ~= tree._tab then
+                        tinsert(keep, id)
+                    end
+                end
+                addon.pickOrder = keep
+                if addon.RevalidatePickOrder then
+                    addon:RevalidatePickOrder()
+                end
+                addon:UpdateCalculatorOverlays()
+                for i = 1, 3 do
+                    addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. i))
+                end
             end
-            addon.pickOrder = keep
-            if addon.RevalidatePickOrder then addon:RevalidatePickOrder() end
-            addon:UpdateCalculatorOverlays()
-            for i = 1, 3 do addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. i)) end
-        end)
+        )
     end
 
     -- buttons (talent icons)
@@ -1600,24 +1840,33 @@ function addon:CreateFrames()
             btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
             local T, I = tab, idx
             -- Vanilla 1.12 scripts do not pass 'self'; use captured btn
-            btn:SetScript("OnEnter", function()
-                addon:ShowTalentTooltip(btn, T, I)
-            end)
-            btn:SetScript("OnLeave", function()
-                GameTooltip:Hide()
-            end)
-            btn:SetScript("OnClick", function()
-                local b = arg1
-                if (b == "LeftButton" or b == "LeftButtonUp") and IsShiftKeyDown() then
-                    addon:FillTalentToMax(T, I, btn)
-                elseif (b == "RightButton" or b == "RightButtonUp") and IsControlKeyDown() then
-                    addon:ClearTalentAllRanks(T, I, btn)
-                elseif b == "LeftButton" or b == "LeftButtonUp" then
-                    addon:OnTalentClick(T, I, btn)
-                elseif b == "RightButton" or b == "RightButtonUp" then
-                    addon:OnTalentRightClick(T, I, btn)
+            btn:SetScript(
+                "OnEnter",
+                function()
+                    addon:ShowTalentTooltip(btn, T, I)
                 end
-            end)
+            )
+            btn:SetScript(
+                "OnLeave",
+                function()
+                    GameTooltip:Hide()
+                end
+            )
+            btn:SetScript(
+                "OnClick",
+                function()
+                    local b = arg1
+                    if (b == "LeftButton" or b == "LeftButtonUp") and IsShiftKeyDown() then
+                        addon:FillTalentToMax(T, I, btn)
+                    elseif (b == "RightButton" or b == "RightButtonUp") and IsControlKeyDown() then
+                        addon:ClearTalentAllRanks(T, I, btn)
+                    elseif b == "LeftButton" or b == "LeftButtonUp" then
+                        addon:OnTalentClick(T, I, btn)
+                    elseif b == "RightButton" or b == "RightButtonUp" then
+                        addon:OnTalentRightClick(T, I, btn)
+                    end
+                end
+            )
             addon.calcTalents[tab][idx] = btn
         end
         addon:DrawPrereqGraph(getglobal("TC_CalcTree" .. tab))
@@ -1759,12 +2008,17 @@ function addon:LegacyHookTalentFrameOnShow()
     if TF and not TF._tcHooked then
         TF._tcHooked = true
         local prev = TF:GetScript("OnShow")
-        TF:SetScript("OnShow", function()
-            if prev then prev() end
-            if not addon.isInitialized then
-                addon:TryInitializeNow()
+        TF:SetScript(
+            "OnShow",
+            function()
+                if prev then
+                    prev()
+                end
+                if not addon.isInitialized then
+                    addon:TryInitializeNow()
+                end
             end
-        end)
+        )
     end
 end
 eventFrame:SetScript(
@@ -1782,7 +2036,9 @@ eventFrame:SetScript(
                 else
                     addon.pickOrder = {}
                 end
-                if addon.InitLauncher then addon:InitLauncher() end
+                if addon.InitLauncher then
+                    addon:InitLauncher()
+                end
             elseif arg1 == "Blizzard_TalentUI" then
                 -- If Blizzard Talent UI just loaded, try to initialize now
                 if not addon.isInitialized then
@@ -1796,8 +2052,11 @@ eventFrame:SetScript(
                 eventFrame:RegisterEvent("SPELLS_CHANGED")
             end
             addon:InstallTalentFrameHook()
-            if addon.InitLauncher then addon:InitLauncher() end
+            if addon.InitLauncher then
+                addon:InitLauncher()
+            end
         elseif event == "SPELLS_CHANGED" then
+            -- Viewer now anchors to TalentFrame and inherits its visibility.
             if not addon.isInitialized then
                 local tabs = GetNumTalentTabs() or 0
                 if tabs > 0 then
@@ -1814,8 +2073,6 @@ eventFrame:SetScript(
                     end
                 end
             end
-
-            -- Viewer now anchors to TalentFrame and inherits its visibility.
         elseif event == "PLAYER_ENTERING_WORLD" then
             if addon.isInitialized then
                 addon:UpdateGlow()
@@ -1836,17 +2093,26 @@ eventFrame:RegisterEvent("PLAYER_LEVEL_UP")
 SLASH_TC1, SLASH_TC2 = "/tc", "/TC"
 
 function addon:TryInitializeNow()
-    if addon.isInitialized then return true end
+    if addon.isInitialized then
+        return true
+    end
     -- Try to load Blizzard Talent UI and create frames if data is ready
     if not IsAddOnLoaded("Blizzard_TalentUI") then
-        if TalentFrame_LoadUI then TalentFrame_LoadUI() else LoadAddOn("Blizzard_TalentUI") end
+        if TalentFrame_LoadUI then
+            TalentFrame_LoadUI()
+        else
+            LoadAddOn("Blizzard_TalentUI")
+        end
     end
     -- Readiness: at least one tab and talents populated
     local tabs = GetNumTalentTabs() or 0
     if tabs > 0 then
         local ok = true
         for t = 1, tabs do
-            if (GetNumTalents(t) or 0) == 0 then ok = false break end
+            if (GetNumTalents(t) or 0) == 0 then
+                ok = false
+                break
+            end
         end
         if ok and not addon.isInitialized then
             addon:CreateFrames()
@@ -1900,9 +2166,7 @@ function addon:DumpZOrder()
     end
 end
 
-
 function SlashCmdList.TC(msg)
-
     if not addon.isInitialized then
         if not addon:TryInitializeNow() then
             addon:Print("Talent data not ready yet; try again in a moment.")
@@ -1927,7 +2191,9 @@ function SlashCmdList.TC(msg)
             end
         end
     elseif cmd == "export" then
-        if not addon.isInitialized then return end
+        if not addon.isInitialized then
+            return
+        end
         if exportFrame and getglobal("TC_ExportBox") then
             importFrame:Hide()
             getglobal("TC_ExportBox"):SetText(addon:ExportToString())
@@ -1935,7 +2201,9 @@ function SlashCmdList.TC(msg)
             exportFrame:Show()
         end
     elseif cmd == "import" then
-        if not addon.isInitialized then return end
+        if not addon.isInitialized then
+            return
+        end
         if importFrame and getglobal("TC_ImportBox") then
             exportFrame:Hide()
             getglobal("TC_ImportBox"):SetText("")
@@ -1956,9 +2224,13 @@ function SlashCmdList.TC(msg)
     elseif cmd == "z" or string.find(cmd, "^layers") or string.find(cmd, "^zorder") then
         addon:DumpZOrder()
     elseif string.find(cmd, "^bg%s+debug%s+on") then
-        EnsureSettings(); TC_Settings.bgDebug = true; addon:Print("BG debug: ON")
+        EnsureSettings()
+        TC_Settings.bgDebug = true
+        addon:Print("BG debug: ON")
     elseif string.find(cmd, "^bg%s+debug%s+off") then
-        EnsureSettings(); TC_Settings.bgDebug = false; addon:Print("BG debug: OFF")
+        EnsureSettings()
+        TC_Settings.bgDebug = false
+        addon:Print("BG debug: OFF")
     elseif string.find(cmd, "^bg%s+status") then
         local n = (calculatorFrame and calculatorFrame._bgFrames and table.getn(calculatorFrame._bgFrames)) or 0
         local idx = 0
@@ -1973,7 +2245,9 @@ function SlashCmdList.TC(msg)
         EnsureSettings()
         addon:Print("BG status: active=" .. idx .. "/" .. n .. ", saved=" .. (TC_Settings.bgIndex or 0))
     elseif string.find(cmd, "^bg%s+reset") then
-        EnsureSettings(); TC_Settings.bgIndex = 1; addon:Print("BG index reset to 1")
+        EnsureSettings()
+        TC_Settings.bgIndex = 1
+        addon:Print("BG index reset to 1")
     elseif string.find(cmd, "^bg%s+set%s+%d+") then
         local _, _, num = string.find(cmd, "^bg%s+set%s+(%d+)")
         if num then
@@ -1988,7 +2262,9 @@ function SlashCmdList.TC(msg)
             addon:InitBackgroundRotator(calculatorFrame)
         end
         if calculatorFrame and calculatorFrame._bgFrames then
-            for _, h in ipairs(calculatorFrame._bgFrames) do h:Show() end
+            for _, h in ipairs(calculatorFrame._bgFrames) do
+                h:Show()
+            end
         end
         addon:RefreshTreeBackdrops()
         addon:RefreshCalcBackdrop()
@@ -2001,19 +2277,27 @@ function SlashCmdList.TC(msg)
         addon:RefreshCalcBackdrop()
         addon:Print("Background rotator: OFF")
     else
-        addon:Print("Usage: /tc [calc | reset | info | export | import | bg on | bg off | bg debug on|off | bg status | bg reset]")
+        addon:Print(
+            "Usage: /tc [calc | reset | info | export | import | bg on | bg off | bg debug on|off | bg status | bg reset]"
+        )
     end
 end
 -- Rotating background for calculator
 function addon:InitBackgroundRotator(frame)
-    if frame._bgFrames then return end
-    if not ROTATING_BACKGROUNDS or table.getn(ROTATING_BACKGROUNDS) == 0 then return end
+    if frame._bgFrames then
+        return
+    end
+    if not ROTATING_BACKGROUNDS or table.getn(ROTATING_BACKGROUNDS) == 0 then
+        return
+    end
     local frames = {}
     -- Match the dialog backdrop insets so the art does not cover the rounded edge
     local inset = 4
 
     local function trySetTexture(tex, path)
-        if not path or path == "" then return false end
+        if not path or path == "" then
+            return false
+        end
         tex:SetTexture(path)
         return tex:GetTexture() ~= nil
     end
@@ -2040,11 +2324,10 @@ function addon:InitBackgroundRotator(frame)
             base = string.gsub(base, "%.TGA$", "")
             base = string.gsub(base, "%.blp$", "")
             base = string.gsub(base, "%.BLP$", "")
-            ok = trySetTexture(tex, base)
-              or trySetTexture(tex, base .. ".tga")
-              or trySetTexture(tex, base .. ".TGA")
-              or trySetTexture(tex, base .. ".blp")
-              or trySetTexture(tex, base .. ".BLP")
+            ok =
+                trySetTexture(tex, base) or trySetTexture(tex, base .. ".tga") or trySetTexture(tex, base .. ".TGA") or
+                trySetTexture(tex, base .. ".blp") or
+                trySetTexture(tex, base .. ".BLP")
         end
         if not ok then
             ok = trySetTexture(tex, art.texture)
@@ -2059,13 +2342,17 @@ function addon:InitBackgroundRotator(frame)
         tinsert(frames, holder)
     end
 
-    if table.getn(frames) == 0 then return end
+    if table.getn(frames) == 0 then
+        return
+    end
     frame._bgFrames = frames
     EnsureSettings()
     local n = table.getn(frame._bgFrames)
     -- Choose starting index from saved; clamp to [1..n]
     local startIndex = tonumber(TC_Settings and TC_Settings.bgIndex) or 1
-    if startIndex < 1 then startIndex = 1 end
+    if startIndex < 1 then
+        startIndex = 1
+    end
     if startIndex > n then
         local a = (startIndex - 1)
         startIndex = (a - math.floor(a / n) * n) + 1
@@ -2077,9 +2364,15 @@ function addon:InitBackgroundRotator(frame)
     addon:Debug("BG init (time-base): n=" .. n .. " start=" .. startIndex)
 
     local function StepBackgroundTime()
-        if not frame or not frame._bgFrames then return end
-        if not frame:IsShown() then return end
-        if frame._bgPaused then return end
+        if not frame or not frame._bgFrames then
+            return
+        end
+        if not frame:IsShown() then
+            return
+        end
+        if frame._bgPaused then
+            return
+        end
         local now = GetTime()
         local elapsed = now - (frame._bgBase or now)
         local k = math.floor(elapsed / cycle)
@@ -2093,7 +2386,9 @@ function addon:InitBackgroundRotator(frame)
             addon:Debug("BG step: hold active=" .. active .. " next=" .. nextIndex .. " t=" .. string.format("%.2f", t))
         else
             local f = (t - BG_ROTATE_PERIOD) / BG_FADE_DURATION
-            if f > 1 then f = 1 end
+            if f > 1 then
+                f = 1
+            end
             frame._bgFrames[active]:SetAlpha(1 - f)
             frame._bgFrames[nextIndex]:SetAlpha(f)
             addon:Debug("BG fade: active=" .. active .. " -> next=" .. nextIndex .. " f=" .. string.format("%.2f", f))
@@ -2122,55 +2417,76 @@ function addon:InitBackgroundRotator(frame)
     -- Prefer AceTimer if embedded, otherwise use OnUpdate
     if addon.ScheduleRepeatingTimer and addon.CancelTimer then
         frame._bgStepper = "timer"
-        frame._bgTimerHandle = addon:ScheduleRepeatingTimer(function()
-            frame._bgStep()
-        end, 0.05)
+        frame._bgTimerHandle =
+            addon:ScheduleRepeatingTimer(
+            function()
+                frame._bgStep()
+            end,
+            0.05
+        )
     else
         frame._bgStepper = "onupdate"
-        frame:SetScript("OnUpdate", function()
-            frame._bgStep()
-        end)
+        frame:SetScript(
+            "OnUpdate",
+            function()
+                frame._bgStep()
+            end
+        )
     end
 end
 
 -- Tiny scheduler helper (AceTimer if present, or one-shot OnUpdate)
 function addon:After(delay, fn)
     if self.ScheduleTimer then
-        self:ScheduleTimer(function()
-            pcall(fn)
-        end, delay)
+        self:ScheduleTimer(
+            function()
+                pcall(fn)
+            end,
+            delay
+        )
     else
         local f = CreateFrame("Frame")
         local t = 0
-        f:SetScript("OnUpdate", function()
-            t = t + arg1
-            if t >= delay then
-                f:SetScript("OnUpdate", nil)
-                pcall(fn)
+        f:SetScript(
+            "OnUpdate",
+            function()
+                t = t + arg1
+                if t >= delay then
+                    f:SetScript("OnUpdate", nil)
+                    pcall(fn)
+                end
             end
-        end)
+        )
     end
 end
 
 function addon:DisableBackgroundRotator(frame)
     frame = frame or calculatorFrame
-    if not frame or not frame._bgFrames then return end
+    if not frame or not frame._bgFrames then
+        return
+    end
     if addon.CancelTimer and frame._bgTimerHandle then
         addon:CancelTimer(frame._bgTimerHandle, true)
         frame._bgTimerHandle = nil
     end
     frame:SetScript("OnUpdate", nil)
-    for _, h in ipairs(frame._bgFrames) do h:Hide() end
+    for _, h in ipairs(frame._bgFrames) do
+        h:Hide()
+    end
     frame._bgFrames = nil
 end
 
 -- Pause/resume rotator during drag to avoid old-client instability
 function addon:PauseBackgroundRotator(frame)
     frame = frame or calculatorFrame
-    if not frame or not frame._bgFrames then return end
+    if not frame or not frame._bgFrames then
+        return
+    end
     EnsureSettings()
     local n = table.getn(frame._bgFrames)
-    if n == 0 then return end
+    if n == 0 then
+        return
+    end
     -- Fully disable rotator (safest on 1.12 during re-anchoring)
     frame._bgPaused = true
     frame._bgPausedWasEnabled = true
@@ -2179,25 +2495,36 @@ end
 
 function addon:ResumeBackgroundRotator(frame)
     frame = frame or calculatorFrame
-    if not frame then return end
+    if not frame then
+        return
+    end
     local want = (TC_Settings and TC_Settings.bgRotate) and frame._bgPausedWasEnabled
     frame._bgPaused = false
     frame._bgPausedWasEnabled = nil
-    if not want then return end
+    if not want then
+        return
+    end
     -- Recreate after a tiny delay to avoid post-drop engine instability
-    addon:After(0.10, function()
-        if not frame._bgFrames and (TC_Settings and TC_Settings.bgRotate) then
-            addon:InitBackgroundRotator(frame)
+    addon:After(
+        0.10,
+        function()
+            if not frame._bgFrames and (TC_Settings and TC_Settings.bgRotate) then
+                addon:InitBackgroundRotator(frame)
+            end
         end
-    end)
+    )
 end
 
 -- Freeze/unfreeze rotator without destroying frames (for Move Mode)
 function addon:FreezeBackgroundRotator(frame)
     frame = frame or calculatorFrame
-    if not frame or not frame._bgFrames then return end
+    if not frame or not frame._bgFrames then
+        return
+    end
     local n = table.getn(frame._bgFrames)
-    if n == 0 then return end
+    if n == 0 then
+        return
+    end
     local cycle = (BG_ROTATE_PERIOD + BG_FADE_DURATION)
     local now = GetTime()
     local elapsed = now - (frame._bgBase or now)
@@ -2205,17 +2532,25 @@ function addon:FreezeBackgroundRotator(frame)
     local start = frame._bgStart or 1
     local active = 1 + (((start - 1) + k) - math.floor(((start - 1) + k) / n) * n)
     -- Show only the active slide
-    for i = 1, n do frame._bgFrames[i]:SetAlpha(0) end
+    for i = 1, n do
+        frame._bgFrames[i]:SetAlpha(0)
+    end
     frame._bgFrames[active]:SetAlpha(1)
     frame._bgPaused = true
-    if TC_Settings then TC_Settings.bgIndex = active end
+    if TC_Settings then
+        TC_Settings.bgIndex = active
+    end
 end
 
 function addon:UnfreezeBackgroundRotator(frame)
     frame = frame or calculatorFrame
-    if not frame or not frame._bgFrames then return end
+    if not frame or not frame._bgFrames then
+        return
+    end
     local n = table.getn(frame._bgFrames)
-    if n == 0 then return end
+    if n == 0 then
+        return
+    end
     local cycle = (BG_ROTATE_PERIOD + BG_FADE_DURATION)
     local now = GetTime()
     local elapsed = now - (frame._bgBase or now)
@@ -2226,5 +2561,7 @@ function addon:UnfreezeBackgroundRotator(frame)
     frame._bgStart = active
     frame._bgBase = GetTime() - (active - 1) * cycle
     frame._bgPaused = false
-    if frame._bgStep then frame._bgStep() end
+    if frame._bgStep then
+        frame._bgStep()
+    end
 end
