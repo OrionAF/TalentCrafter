@@ -1170,8 +1170,9 @@ local function HideUnused(tree)
 end
 
 local function BranchXY(col, tier)
-    local x = ((col - 1) * GRID_SPACING) + INITIAL_X + 2
-    local y = -((tier - 1) * GRID_SPACING) - INITIAL_Y - 2
+    -- Align to exact icon centers; avoid extra fudge to prevent gaps
+    local x = ((col - 1) * GRID_SPACING) + INITIAL_X
+    local y = -((tier - 1) * GRID_SPACING) - INITIAL_Y
     return x, y
 end
 
@@ -1184,10 +1185,9 @@ local function SafeGetCoord(tbl, key1, key2)
 end
 
 local function SetBranchTex(tree, kind, variant, x, y, color)
-    local uv = SafeGetCoord(TALENT_BRANCH_TEXTURECOORDS, kind, variant)
-    if not uv then
-        return
-    end
+    -- Strategy: always use atlas variant 1 UVs; drive unmet color via desaturation
+    local uv = SafeGetCoord(TALENT_BRANCH_TEXTURECOORDS, kind, 1)
+    if not uv then return end
     local t = GetBranchTex(tree)
     if not t then
         return
@@ -1195,17 +1195,30 @@ local function SetBranchTex(tree, kind, variant, x, y, color)
     t:SetTexCoord(uv[1], uv[2], uv[3], uv[4])
     t:SetWidth(BRANCH_W)
     t:SetHeight(BRANCH_H)
-    local c = color or COLOR_ENABLED
-    t:SetVertexColor(c[1], c[2], c[3], c[4])
+    local isUnmet = (addon and addon._drawingUnmet) or (color == COLOR_DISABLED)
+    if isUnmet then
+        if t.SetDesaturated then
+            t:SetDesaturated(true)
+            t:SetVertexColor(1, 1, 1, 1)
+        else
+            -- Fallback: approximate gray
+            t:SetVertexColor(0.6, 0.6, 0.6, 1)
+        end
+    else
+        if t.SetDesaturated then
+            t:SetDesaturated(false)
+        end
+        local c = color or COLOR_ENABLED
+        t:SetVertexColor(c[1], c[2], c[3], c[4])
+    end
     t:ClearAllPoints()
     t:SetPoint("CENTER", tree.branchLayer, "TOPLEFT", x, y)
 end
 
 local function SetArrowTex(tree, dir, variant, x, y, color)
-    local uv = SafeGetCoord(TALENT_ARROW_TEXTURECOORDS, dir, variant)
-    if not uv then
-        return
-    end
+    -- Strategy: always use atlas variant 1 UVs; drive unmet color via desaturation
+    local uv = SafeGetCoord(TALENT_ARROW_TEXTURECOORDS, dir, 1)
+    if not uv then return end
     local t = GetArrowTex(tree)
     if not t then
         return
@@ -1213,8 +1226,21 @@ local function SetArrowTex(tree, dir, variant, x, y, color)
     t:SetTexCoord(uv[1], uv[2], uv[3], uv[4])
     t:SetWidth(ARROW_W)
     t:SetHeight(ARROW_H)
-    local c = color or COLOR_ENABLED
-    t:SetVertexColor(c[1], c[2], c[3], c[4])
+    local isUnmet = (addon and addon._drawingUnmet) or (color == COLOR_DISABLED)
+    if isUnmet then
+        if t.SetDesaturated then
+            t:SetDesaturated(true)
+            t:SetVertexColor(1, 1, 1, 1)
+        else
+            t:SetVertexColor(0.6, 0.6, 0.6, 1)
+        end
+    else
+        if t.SetDesaturated then
+            t:SetDesaturated(false)
+        end
+        local c = color or COLOR_ENABLED
+        t:SetVertexColor(c[1], c[2], c[3], c[4])
+    end
     t:ClearAllPoints()
     t:SetPoint("CENTER", tree.arrowLayer, "TOPLEFT", x, y)
 end
@@ -1268,7 +1294,7 @@ local function BuildGraphs(tree, counts)
             local tierUnlocked = (spent >= requiredPoints)
             local ok = (preMaxRank and have >= preMaxRank) and tierUnlocked
             local target = ok and met or unmet
-            -- We use tint-based coloring; variant index is constant (1)
+            -- Use a single variant index for presence; color selects atlas row
             local flag = 1
 
             if bCol == pCol then
@@ -1277,6 +1303,9 @@ local function BuildGraphs(tree, counts)
                     target[t][bCol].down = flag
                     if (t + 1) < bTier then
                         target[t + 1][bCol].up = flag
+                    else
+                        -- ensure last segment reaches into the child cell
+                        target[bTier][bCol].up = flag
                     end
                 end
                 target[bTier][bCol].topArrow = flag
@@ -1347,6 +1376,7 @@ local function DrawFromNodes(tree, nodes, color)
             local n = nodes[tier][col]
             local x, y = BranchXY(col, tier)
             if n.id then
+                -- Use Blizzard/Vanilla placement that the atlas is authored for
                 if n.up ~= 0 then
                     SetBranchTex(tree, "up", n.up, x, y + ICON_SIZE, color)
                 end
@@ -1376,7 +1406,7 @@ local function DrawFromNodes(tree, nodes, color)
                     SetBranchTex(tree, "tdown", n.down, x, y, color)
                 elseif n.left ~= 0 and n.down ~= 0 then
                     SetBranchTex(tree, "topright", n.left, x, y, color)
-                    SetBranchTex(tree, "down", n.down, x, y - 32, color)
+                    SetBranchTex(tree, "down", n.down, x, y - BRANCH_H, color)
                 elseif n.left ~= 0 and n.up ~= 0 then
                     SetBranchTex(tree, "bottomright", n.left, x, y, color)
                 elseif n.left ~= 0 and n.right ~= 0 then
@@ -1384,12 +1414,18 @@ local function DrawFromNodes(tree, nodes, color)
                     SetBranchTex(tree, "left", n.left, x + 1, y, color)
                 elseif n.right ~= 0 and n.down ~= 0 then
                     SetBranchTex(tree, "topleft", n.right, x, y, color)
-                    SetBranchTex(tree, "down", n.down, x, y - 32, color)
+                    SetBranchTex(tree, "down", n.down, x, y - BRANCH_H, color)
                 elseif n.right ~= 0 and n.up ~= 0 then
                     SetBranchTex(tree, "bottomleft", n.right, x, y, color)
                 elseif n.up ~= 0 and n.down ~= 0 then
                     SetBranchTex(tree, "up", n.up, x, y, color)
-                    SetBranchTex(tree, "down", n.down, x, y - 32, color)
+                    SetBranchTex(tree, "down", n.down, x, y - BRANCH_H, color)
+                elseif n.down ~= 0 then
+                    -- single vertical continuation (bottom half)
+                    SetBranchTex(tree, "down", n.down, x, y - BRANCH_H, color)
+                elseif n.up ~= 0 then
+                    -- single vertical continuation (top half)
+                    SetBranchTex(tree, "up", n.up, x, y, color)
                 end
             end
         end
@@ -1406,8 +1442,10 @@ function addon:DrawPrereqGraph(tree)
         PruneUnmetWhereMet(unmet, met)
     end
     tree._branchTexIndex, tree._arrowTexIndex = 1, 1
-    -- Tint-based coloring: gray for unmet, gold for met
+    -- Draw unmet in gray (atlas gray if available, else tint), met in gold
+    addon._drawingUnmet = true
     DrawFromNodes(tree, unmet, COLOR_DISABLED)
+    addon._drawingUnmet = false
     DrawFromNodes(tree, met, COLOR_ENABLED)
     HideUnused(tree)
 end
