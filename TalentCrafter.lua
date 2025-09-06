@@ -44,6 +44,10 @@ local TOP_PAD, BOTTOM_PAD = 36, 36
 -- Branch/arrow tile size
 local BRANCH_W, BRANCH_H = 32, 32
 local ARROW_W, ARROW_H = 32, 32
+-- Make vertical branch halves exactly fill our grid. With GRID_SPACING=70,
+-- each cell needs 35px up + 35px down to avoid cracks. Keep the base atlas
+-- size (32) for corners; only scale straight up/down segments.
+local VERT_SEG = floor(GRID_SPACING / 2 + 0.5)
 
 -- Colors
 local COLOR_ENABLED = {1.00, 0.90, 0.20, 1.0} -- warm gold
@@ -1194,7 +1198,11 @@ local function SetBranchTex(tree, kind, variant, x, y, color)
     end
     t:SetTexCoord(uv[1], uv[2], uv[3], uv[4])
     t:SetWidth(BRANCH_W)
-    t:SetHeight(BRANCH_H)
+    if kind == "up" or kind == "down" then
+        t:SetHeight(VERT_SEG)
+    else
+        t:SetHeight(BRANCH_H)
+    end
     local isUnmet = (addon and addon._drawingUnmet) or (color == COLOR_DISABLED)
     if isUnmet then
         if t.SetDesaturated then
@@ -1378,11 +1386,11 @@ local function DrawFromNodes(tree, nodes, color)
             if n.id then
                 -- Use Blizzard/Vanilla placement that the atlas is authored for
                 if n.up ~= 0 then
-                    -- From icon edge outward by half a branch tile
-                    SetBranchTex(tree, "up", n.up, x, y + (ICON_SIZE / 2 + BRANCH_H / 2), color)
+                    -- From icon edge outward by half of the vertical segment
+                    SetBranchTex(tree, "up", n.up, x, y + (ICON_SIZE / 2 + VERT_SEG / 2), color)
                 end
                 if n.down ~= 0 then
-                    SetBranchTex(tree, "down", n.down, x, y - (ICON_SIZE / 2 + BRANCH_H / 2) + 1, color)
+                    SetBranchTex(tree, "down", n.down, x, y - (ICON_SIZE / 2 + VERT_SEG / 2) + 1, color)
                 end
                 if n.left ~= 0 then
                     SetBranchTex(tree, "left", n.left, x - (ICON_SIZE / 2 + BRANCH_W / 2), y, color)
@@ -1408,7 +1416,7 @@ local function DrawFromNodes(tree, nodes, color)
                 elseif n.left ~= 0 and n.down ~= 0 then
                     SetBranchTex(tree, "topright", n.left, x, y, color)
                     -- Bottom half of the vertical segment in this cell
-                    SetBranchTex(tree, "down", n.down, x, y - (BRANCH_H / 2), color)
+                    SetBranchTex(tree, "down", n.down, x, y - (VERT_SEG / 2), color)
                 elseif n.left ~= 0 and n.up ~= 0 then
                     SetBranchTex(tree, "bottomright", n.left, x, y, color)
                 elseif n.left ~= 0 and n.right ~= 0 then
@@ -1416,19 +1424,19 @@ local function DrawFromNodes(tree, nodes, color)
                     SetBranchTex(tree, "left", n.left, x + 1, y, color)
                 elseif n.right ~= 0 and n.down ~= 0 then
                     SetBranchTex(tree, "topleft", n.right, x, y, color)
-                    SetBranchTex(tree, "down", n.down, x, y - (BRANCH_H / 2), color)
+                    SetBranchTex(tree, "down", n.down, x, y - (VERT_SEG / 2), color)
                 elseif n.right ~= 0 and n.up ~= 0 then
                     SetBranchTex(tree, "bottomleft", n.right, x, y, color)
                 elseif n.up ~= 0 and n.down ~= 0 then
                     -- Place vertical halves to meet in the middle of the cell
-                    SetBranchTex(tree, "up", n.up, x, y + (BRANCH_H / 2), color)
-                    SetBranchTex(tree, "down", n.down, x, y - (BRANCH_H / 2), color)
+                    SetBranchTex(tree, "up", n.up, x, y + (VERT_SEG / 2), color)
+                    SetBranchTex(tree, "down", n.down, x, y - (VERT_SEG / 2), color)
                 elseif n.down ~= 0 then
                     -- single vertical continuation (bottom half)
-                    SetBranchTex(tree, "down", n.down, x, y - (BRANCH_H / 2), color)
+                    SetBranchTex(tree, "down", n.down, x, y - (VERT_SEG / 2), color)
                 elseif n.up ~= 0 then
                     -- single vertical continuation (top half)
-                    SetBranchTex(tree, "up", n.up, x, y + (BRANCH_H / 2), color)
+                    SetBranchTex(tree, "up", n.up, x, y + (VERT_SEG / 2), color)
                 end
             end
         end
