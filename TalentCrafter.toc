@@ -10,4 +10,9 @@ lib\Ace3.toc
 lib\LibDataBroker-1.1.lua
 lib\LibDBIcon-1.0.lua
 
+TalentCrafter_Boot.lua
+util\Utils.lua
+ui\Background.lua
+ui\Branches.lua
 TalentCrafter.lua
+logic\Builds.lua

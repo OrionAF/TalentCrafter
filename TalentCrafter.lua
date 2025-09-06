@@ -2,7 +2,15 @@
 -- TalentCrafter (Vanilla 1.12.1 / Turtle WoW)
 -- ============================================================================
 local ADDON_NAME = "TalentCrafter"
-local addon = {isInitialized = false, talentLines = {}, calcTalents = {}, pickOrder = {}, viewerCollapsed = false}
+-- Extend or create the shared global addon table so we can split files safely
+local addon = _G.TalentCrafter or {}
+_G.TalentCrafter = addon
+-- Ensure core fields exist (do not clobber if already created by another file)
+addon.isInitialized = addon.isInitialized or false
+addon.talentLines = addon.talentLines or {}
+addon.calcTalents = addon.calcTalents or {}
+addon.pickOrder = addon.pickOrder or {}
+addon.viewerCollapsed = addon.viewerCollapsed or false
 local mainFrame, calculatorFrame, exportFrame, importFrame, scrollFrame
 
 -- No default guides — keep these nil.
@@ -57,6 +65,25 @@ local COLOR_WHITE = {1.0, 1.0, 1.0, 1.0}
 -- Draw policy: draw unmet (gray) first, then met (gold) on top.
 local GOLD_WINS = true
 
+-- Expose layout/colors to the shared addon table for module access
+addon.TREE_W = addon.TREE_W or TREE_W
+addon.ICON_SIZE = addon.ICON_SIZE or ICON_SIZE
+addon.GRID_SPACING = addon.GRID_SPACING or GRID_SPACING
+addon.NUM_COLS = addon.NUM_COLS or NUM_COLS
+addon.INITIAL_X = addon.INITIAL_X or INITIAL_X
+addon.INITIAL_Y = addon.INITIAL_Y or INITIAL_Y
+addon.TOP_PAD = addon.TOP_PAD or TOP_PAD
+addon.BOTTOM_PAD = addon.BOTTOM_PAD or BOTTOM_PAD
+addon.BRANCH_W = addon.BRANCH_W or BRANCH_W
+addon.BRANCH_H = addon.BRANCH_H or BRANCH_H
+addon.ARROW_W = addon.ARROW_W or ARROW_W
+addon.ARROW_H = addon.ARROW_H or ARROW_H
+addon.VERT_SEG = addon.VERT_SEG or VERT_SEG
+addon.COLOR_ENABLED = addon.COLOR_ENABLED or COLOR_ENABLED
+addon.COLOR_DISABLED = addon.COLOR_DISABLED or COLOR_DISABLED
+addon.COLOR_WHITE = addon.COLOR_WHITE or COLOR_WHITE
+addon.GOLD_WINS = (addon.GOLD_WINS ~= nil) and addon.GOLD_WINS or GOLD_WINS
+
 -- Background insets (inside each gold-bordered tree)
 local BG_INSET_L, BG_INSET_R = 10, 10
 local BG_INSET_TOP = 28
@@ -68,6 +95,9 @@ local USE_TREE_BACKGROUNDS = false -- single rotating background instead
 -- Background rotator timing
 local BG_ROTATE_PERIOD = 12 -- seconds fully visible
 local BG_FADE_DURATION = 2 -- seconds crossfade
+-- Expose to shared addon table for modules
+addon.BG_ROTATE_PERIOD = addon.BG_ROTATE_PERIOD or BG_ROTATE_PERIOD
+addon.BG_FADE_DURATION = addon.BG_FADE_DURATION or BG_FADE_DURATION
 
 -- Rotating background artwork and credits
 local ROTATING_BACKGROUNDS = {
@@ -218,6 +248,8 @@ local ROTATING_BACKGROUNDS = {
         artist = "Ghor"
     }
 }
+-- Expose artwork list so other files (e.g., settings/info/background) can read it
+addon.ROTATING_BACKGROUNDS = addon.ROTATING_BACKGROUNDS or ROTATING_BACKGROUNDS
 
 -- ===== Helpers ==============================================================
 
@@ -489,7 +521,7 @@ local function BuildInfoFrame()
     intro:SetText("Background artwork credits:")
     y = y - 18
 
-    for _, art in ipairs(ROTATING_BACKGROUNDS) do
+    for _, art in ipairs(addon.ROTATING_BACKGROUNDS or {}) do
         local line = content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         line:SetPoint("TOPLEFT", 0, y)
         line:SetWidth(360)
@@ -640,6 +672,15 @@ end
 -- ===== Calculator logic =====================================================
 
 local function currentRankCounts()
+    local counts = {}
+    for _, id in ipairs(addon.pickOrder) do
+        counts[id] = (counts[id] or 0) + 1
+    end
+    return counts
+end
+
+-- Expose counter for modules
+addon.CurrentRankCounts = addon.CurrentRankCounts or function()
     local counts = {}
     for _, id in ipairs(addon.pickOrder) do
         counts[id] = (counts[id] or 0) + 1
@@ -1223,6 +1264,9 @@ local function SetBranchTex(tree, kind, variant, x, y, color)
     t:SetPoint("CENTER", tree.branchLayer, "TOPLEFT", x, y)
 end
 
+-- Expose helper for modules
+addon.FindTalentByPosition = addon.FindTalentByPosition or FindTalentByPosition
+
 local function SetArrowTex(tree, dir, variant, x, y, color)
     -- Strategy: always use atlas variant 1 UVs; drive unmet color via desaturation
     local uv = SafeGetCoord(TALENT_ARROW_TEXTURECOORDS, dir, 1)
@@ -1444,21 +1488,12 @@ local function DrawFromNodes(tree, nodes, color)
 end
 
 function addon:DrawPrereqGraph(tree)
-    if not self.calcTalents or not tree or not tree._tab or not self.calcTalents[tree._tab] then
-        return
+    -- If module implementation is available, delegate to it
+    if self.Branches_DrawPrereqGraph then
+        return self:Branches_DrawPrereqGraph(tree)
     end
-    local counts = currentRankCounts()
-    local unmet, met = BuildGraphs(tree, counts)
-    if GOLD_WINS then
-        PruneUnmetWhereMet(unmet, met)
-    end
-    tree._branchTexIndex, tree._arrowTexIndex = 1, 1
-    -- Draw unmet in gray (atlas gray if available, else tint), met in gold
-    addon._drawingUnmet = true
-    DrawFromNodes(tree, unmet, COLOR_DISABLED)
-    addon._drawingUnmet = false
-    DrawFromNodes(tree, met, COLOR_ENABLED)
-    HideUnused(tree)
+    -- Fallback no-op if module missing
+    if not tree or not tree._tab then return end
 end
 
 -- ===== Dynamic sizing / centering ==========================================
@@ -2284,7 +2319,7 @@ function SlashCmdList.TC(msg)
         local n = (calculatorFrame and calculatorFrame._bgFrames and table.getn(calculatorFrame._bgFrames)) or 0
         local idx = 0
         if calculatorFrame and calculatorFrame._bgFrames and n > 0 then
-            local cycle = (BG_ROTATE_PERIOD + BG_FADE_DURATION)
+            local cycle = ((addon.BG_ROTATE_PERIOD or 12) + (addon.BG_FADE_DURATION or 2))
             local now = GetTime()
             local elapsed = now - (calculatorFrame._bgBase or now)
             local k = math.floor(elapsed / cycle)
